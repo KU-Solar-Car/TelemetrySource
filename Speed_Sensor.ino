@@ -1,9 +1,10 @@
-// digital pin 2 is the hall pin
-int hall_pin = 2;
-// set number of hall trips for RPM reading (higher improves accuracy)
-float hall_thresh = 100.0;
+
 
 void setup() {
+  // digital pin 2 is the hall pin
+int hall_pin = 2;
+// set number of hall trips for RPM reading (higher improves accuracy)
+float hall_thresh = 1.0;
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
   // make the hall pin an input:
@@ -18,8 +19,7 @@ void loop() {
   bool on_state = false;
   // counting number of times the hall sensor is tripped
   // but without double counting during the same trip
-  while(true){
-    if (digitalRead(hall_pin)==0){
+  if (digitalRead(hall_pin)==0){
       if (on_state==false){
         on_state = true;
         hall_count+=1.0;
@@ -31,7 +31,7 @@ void loop() {
     if (hall_count>=hall_thresh){
       break;
     }
-  }
+  
   
   // print information about Time and RPM
   float end_time = micros();
