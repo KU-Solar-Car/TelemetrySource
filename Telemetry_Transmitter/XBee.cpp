@@ -93,7 +93,7 @@ userPacket XBee::read()
   {
     // calculate the checksum
     uint8_t my_checksum = m_rxBuffer.frameType; // frameType is technically the start of frameData
-    for (unsigned int i = 0; i < m_rxBuffer.length; i++)
+    for (unsigned int i = 0; i < m_rxBuffer.frameData.length(); i++)
     {
       my_checksum += (uint8_t) m_rxBuffer.frameData.charAt(i);
     }
