@@ -12,7 +12,22 @@ packet::packet()
   frameData.reserve(1550);
 }
 
-
+bool XBee::configure(const String& server)
+{
+  m_serial.write("+++");
+  delay(1500);
+  String ok = m_serial.readStringUntil('\r');
+  if (ok != "OK")
+    return false;
+  m_serial.write("ATAP 1\r");
+  delay(2000);
+  ok = "";
+  ok = m_serial.readStringUntil('\r');
+  if (ok != "OK")
+    return false;
+  m_serial.write("CN\r");
+  return true;
+}
 void XBee::sendFrame(byte frameType, const String& frameData)
 {
   uint16_t checksum = 0;
@@ -38,9 +53,23 @@ void XBee::sendATCommand(const String& command, const String& param)
   sendFrame(0x08, command+param);
 }
 
-void XBee::shutDown()
+bool XBee::shutdown()
 {
-  sendATCommand("SD", "0");
+  // sendATCommand("SD", "0");
+  m_serial.write("+++");
+  delay(1500);
+  String ok = m_serial.readStringUntil('\r');
+  if (ok != "OK")
+    return false;
+  m_serial.write("ATSD 0\r");
+  m_serial.setTimeout(30000);
+  ok = "";
+  ok = m_serial.readStringUntil('\r');
+  m_serial.setTimeout(1000);
+  if (ok != "OK")
+    return false;
+  m_serial.write("CN\r");
+  return true;
 }
 
 userPacket XBee::read()

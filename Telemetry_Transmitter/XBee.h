@@ -39,13 +39,13 @@ class XBee
 
   public:
   XBee(HardwareSerial &serial) : m_serial(serial) {}
-  void configure(const String& server);
+  bool configure(const String& server);
   void openConnection();
   void closeConnection();
   void sendPacket(const String& message);
   userPacket read(); // Can read one full packet at a time.
   bool waitFor(const String& message, int timeout);
-  void shutDown();
+  bool shutdown();
   void sendFrame(byte frameType, const String& frameData);
   void sendATCommand(const String& command, const String& param);
 };
