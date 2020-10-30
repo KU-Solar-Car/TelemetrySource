@@ -36,7 +36,7 @@ void XBee::sendFrame(byte frameType, const String& frameData)
     checksum += frameData[i];
   checksum = 0xFF - checksum;
 
-  const byte start = 0xFE;
+  const byte start = 0x7E;
   byte len_msb = (byte) len >> 8;
   byte len_lsb = (byte) len;
 
