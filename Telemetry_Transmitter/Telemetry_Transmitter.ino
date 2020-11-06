@@ -66,7 +66,7 @@ void printReceivedPacket()
     SerialUSB.println(data);
   */
   if (Serial.available())
-    SerialUSB.print(Serial.readString());
+    SerialUSB.print(Serial.read());
 }
 
 void shutdownOnCommand()
@@ -74,10 +74,12 @@ void shutdownOnCommand()
   if (SerialUSB.read() == 's')
   {
     SerialUSB.println("Shutting down, please wait about 30 seconds...");
-    if (xbee.shutdown())
+    /* xbee.shutdown(); */
+    if (xbee.shutdownCommandMode())
       SerialUSB.println("Shutdown successful");
     else
       SerialUSB.println("Shutdown failed");
+    
   }
 }
 

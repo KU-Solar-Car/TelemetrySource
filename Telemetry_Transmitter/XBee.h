@@ -38,14 +38,15 @@ class XBee
   packet m_rxBuffer;
 
   public:
-  XBee(HardwareSerial &serial) : m_serial(serial) {}
+  XBee(MonitoredSerial &serial) : m_serial(serial) {}
   bool configure(const String& server);
   void openConnection();
   void closeConnection();
   void sendPacket(const String& message);
   userPacket read(); // Can read one full packet at a time.
   bool waitFor(const String& message, int timeout);
-  bool shutdown();
+  bool shutdownCommandMode();
+  void shutdown();
   void sendFrame(byte frameType, const String& frameData);
   void sendATCommand(const String& command, const String& param);
 };

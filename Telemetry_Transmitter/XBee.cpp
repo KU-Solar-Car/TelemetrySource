@@ -46,6 +46,16 @@ void XBee::sendFrame(byte frameType, const String& frameData)
   m_serial.write(frameType);
   m_serial.write(frameData.c_str());
   m_serial.write(checksum);
+
+
+  // debug
+  /*
+  m_serial.print(start);
+  m_serial.print((int) (len_msb << 8) + len_lsb);
+  m_serial.print(frameType);
+  m_serial.print(frameData.c_str());
+  m_serial.print(checksum);
+  */
 }
 
 void XBee::sendATCommand(const String& command, const String& param)
@@ -53,9 +63,13 @@ void XBee::sendATCommand(const String& command, const String& param)
   sendFrame(0x08, command+param);
 }
 
-bool XBee::shutdown()
+void XBee::shutdown()
 {
-  // sendATCommand("SD", "0");
+  sendATCommand("SD", "0");
+}
+
+bool XBee::shutdownCommandMode()
+{
   m_serial.write("+++");
   delay(1500);
   String ok = m_serial.readStringUntil('\r');
