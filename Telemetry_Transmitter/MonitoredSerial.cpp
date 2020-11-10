@@ -1,7 +1,10 @@
+#include "MonitoredSerial.h"
+
 int MonitoredSerial::read(void)
 {
   int temp = m_toMonitor.read();
-  m_listener.write(temp);
+  if (temp != -1)
+    m_listener.write(temp);
   return temp;
 }
 
@@ -20,4 +23,9 @@ int MonitoredSerial::peek()
 int MonitoredSerial::available()
 {
   return m_toMonitor.available();
+}
+
+void MonitoredSerial::flush()
+{
+  return m_toMonitor.flush();
 }
