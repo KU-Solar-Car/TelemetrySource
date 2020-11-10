@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 #include <string>
+#include "MonitoredSerial.h"
 
 struct packet
 {
@@ -34,11 +35,11 @@ const userPacket NULL_USER_PACKET = {0, ""};
 class XBee
 {
   private:
-  HardwareSerial& m_serial;
+  MonitoredSerial& m_serial;
   packet m_rxBuffer;
 
   public:
-  XBee(MonitoredSerial &serial) : m_serial(serial) {}
+  XBee(MonitoredSerial& serial) : m_serial(serial) {}
   bool configure(const String& server);
   void openConnection();
   void closeConnection();

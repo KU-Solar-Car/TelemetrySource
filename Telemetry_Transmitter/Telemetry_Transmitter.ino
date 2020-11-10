@@ -5,7 +5,8 @@ const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
 byte maxTemp;
 unsigned long nextTimeWeSendPacket;
-XBee xbee(Serial);
+MonitoredSerial mySerial(Serial, SerialUSB);
+XBee xbee(mySerial);
 
 void setup()
 {
@@ -60,13 +61,7 @@ void sendMaxTempEveryFiveSeconds()
 
 void printReceivedPacket()
 {
-  /*
   const String& data = xbee.read().frameData;
-  if (data != "")
-    SerialUSB.println(data);
-  */
-  if (Serial.available())
-    SerialUSB.print(Serial.read());
 }
 
 void shutdownOnCommand()
@@ -74,11 +69,13 @@ void shutdownOnCommand()
   if (SerialUSB.read() == 's')
   {
     SerialUSB.println("Shutting down, please wait about 30 seconds...");
-    /* xbee.shutdown(); */
+    xbee.shutdown();
+    /*
     if (xbee.shutdownCommandMode())
       SerialUSB.println("Shutdown successful");
     else
       SerialUSB.println("Shutdown failed");
+    */
     
   }
 }

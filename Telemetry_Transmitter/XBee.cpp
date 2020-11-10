@@ -30,20 +30,23 @@ bool XBee::configure(const String& server)
 }
 void XBee::sendFrame(byte frameType, const String& frameData)
 {
-  uint16_t checksum = 0;
-  uint16_t len = frameData.length();
+  uint16_t checksum = frameType;
+  uint16_t len = frameData.length() + 1;
   for (uint16_t i = 0; i < len; i++)
     checksum += frameData[i];
   checksum = 0xFF - checksum;
 
   const byte start = 0x7E;
-  byte len_msb = (byte) len >> 8;
+  byte len_msb = (byte) (len >> 8);
   byte len_lsb = (byte) len;
+
+  SerialUSB.println("Length of frameData: " + String(len));
+  SerialUSB.println("MSB: " + String(len_msb));
+  SerialUSB.println("LSB: " + String(len_lsb));
 
   m_serial.write(start);
   m_serial.write(len_msb);
   m_serial.write(len_lsb);
-  m_serial.write(frameType);
   m_serial.write(frameData.c_str());
   m_serial.write(checksum);
 
@@ -60,6 +63,9 @@ void XBee::sendFrame(byte frameType, const String& frameData)
 
 void XBee::sendATCommand(const String& command, const String& param)
 {
+  SerialUSB.println("Length of command: " + String(command.length()));
+  SerialUSB.println("Length of param: " + String(param.length()));
+  SerialUSB.println("Length of frame type: " + String(String((char)0x08).length()));
   sendFrame(0x08, command+param);
 }
 
