@@ -69,14 +69,15 @@ void shutdownOnCommand()
   if (SerialUSB.read() == 's')
   {
     SerialUSB.println("Shutting down, please wait about 30 seconds...");
-    xbee.shutdown();
-    /*
-    if (xbee.shutdownCommandMode())
-      SerialUSB.println("Shutdown successful");
+    if (SerialUSB.read() != 'c')
+      xbee.shutdown();
     else
-      SerialUSB.println("Shutdown failed");
-    */
-    
+    {
+      if (xbee.shutdownCommandMode())
+        SerialUSB.println("Shutdown successful");
+      else
+        SerialUSB.println("Shutdown failed");
+    }
   }
 }
 

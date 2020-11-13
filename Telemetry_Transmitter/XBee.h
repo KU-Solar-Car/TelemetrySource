@@ -7,30 +7,31 @@
 #define XBEE_H
 
 #include <Arduino.h>
-#include <string>
 #include "MonitoredSerial.h"
 
 struct packet
 {
+  const uint16_t MAX_BUFFER_SIZE = 1550;
   packet();
+  ~packet();
+  packet& operator=(const packet& other);
   bool recvd_start;
-  bool recvd_len_msb;
-  bool recvd_len_lsb;
-  bool recvd_frameType;
-  bool recvd_checksum;
+  uint16_t bytes_recvd;
   uint16_t length;
   uint8_t frameType;
-  String frameData;
+  uint8_t frameID;
+  char* frameData;
+  bool recvd_checksum;
   uint8_t checksum;
 };
 
 struct userPacket
 {
   const uint8_t& frameType;
-  const String& frameData;
+  const char* const frameData;
 };
 
-const userPacket NULL_USER_PACKET = {0, ""};
+const userPacket NULL_USER_PACKET = {0, nullptr};
 
 class XBee
 {
@@ -48,8 +49,8 @@ class XBee
   bool waitFor(const String& message, int timeout);
   bool shutdownCommandMode();
   void shutdown();
-  void sendFrame(byte frameType, const String& frameData);
-  void sendATCommand(const String& command, const String& param);
+  void sendFrame(byte frameType, byte frameID, const char frameData[], size_t frameDataLen);
+  void sendATCommand(const char command[], const char param[], size_t paramLen);
 };
 
 #endif

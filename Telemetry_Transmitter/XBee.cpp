@@ -9,7 +9,28 @@
 packet::packet()
 {
   // Helps prevent heap fragmentation (even though it's very possible in the rest of my code :/)
-  frameData.reserve(1550);
+  frameData = new char[MAX_BUFFER_SIZE];
+}
+
+packet::~packet()
+{
+  delete[] frameData;
+}
+
+packet& packet::operator=(const packet& other)
+{
+  recvd_start = other.recvd_start;
+  bytes_recvd = other.bytes_recvd;
+  length = other.length;
+  frameType = other.frameType;
+  frameID = other.frameID;
+  for (unsigned i = 0; i < (length-2); i++)
+  {
+    frameData[i] = '\0'; // clear the frameData
+  }
+  memcpy(frameData, other.frameData, length-2); // copy the new frameData over
+  recvd_checksum = other.recvd_checksum;
+  checksum = other.checksum;
 }
 
 bool XBee::configure(const String& server)
@@ -28,26 +49,29 @@ bool XBee::configure(const String& server)
   m_serial.write("CN\r");
   return true;
 }
-void XBee::sendFrame(byte frameType, const String& frameData)
+void XBee::sendFrame(byte frameType, byte frameID, const char frameData[], size_t frameDataLen)
 {
-  uint16_t checksum = frameType;
-  uint16_t len = frameData.length() + 1;
-  for (uint16_t i = 0; i < len; i++)
+  uint16_t checksum = frameType + frameID;
+  uint16_t len = frameDataLen + 2; // length of frameData + length of frameType + length of frameID
+  for (uint16_t i = 0; i < frameDataLen; i++)
     checksum += frameData[i];
   checksum = 0xFF - checksum;
 
-  const byte start = 0x7E;
-  byte len_msb = (byte) (len >> 8);
-  byte len_lsb = (byte) len;
+  const uint8_t start = 0x7E;
+  byte len_msb = (uint8_t) (len >> 8);
+  byte len_lsb = (uint8_t) len;
 
   SerialUSB.println("Length of frameData: " + String(len));
   SerialUSB.println("MSB: " + String(len_msb));
   SerialUSB.println("LSB: " + String(len_lsb));
+  SerialUSB.println("checksum: " + String(checksum));
 
   m_serial.write(start);
   m_serial.write(len_msb);
   m_serial.write(len_lsb);
-  m_serial.write(frameData.c_str());
+  m_serial.write(frameType);
+  m_serial.write(frameID);
+  m_serial.write(frameData, frameDataLen);
   m_serial.write(checksum);
 
 
@@ -61,17 +85,21 @@ void XBee::sendFrame(byte frameType, const String& frameData)
   */
 }
 
-void XBee::sendATCommand(const String& command, const String& param)
+void XBee::sendATCommand(const char command[], const char param[], size_t paramLen)
 {
-  SerialUSB.println("Length of command: " + String(command.length()));
-  SerialUSB.println("Length of param: " + String(param.length()));
-  SerialUSB.println("Length of frame type: " + String(String((char)0x08).length()));
-  sendFrame(0x08, command+param);
+  SerialUSB.println("Length of command: 2");
+  SerialUSB.println("Length of param: " + String(paramLen));
+  SerialUSB.println("Length of frame type: 1");
+  char* temp = new char[2 + paramLen];
+  memcpy(temp, command, 2);
+  memcpy(temp+2, param, paramLen);
+  sendFrame(0x08, 0x01, temp, 2+paramLen);
+  delete[] temp;
 }
 
 void XBee::shutdown()
 {
-  sendATCommand("SD", "0");
+  sendATCommand("SD", (char) 0x00, 1);
 }
 
 bool XBee::shutdownCommandMode()
@@ -107,28 +135,29 @@ userPacket XBee::read()
   // if we don't have the full packet yet, return ""
   for (int recvd = m_serial.read(); (recvd != -1 && !m_rxBuffer.recvd_checksum); recvd = m_serial.read())
   {
-    if (!m_rxBuffer.recvd_start)
+    if (m_rxBuffer.bytes_recvd == 0)
     {
       m_rxBuffer.recvd_start = (recvd == 0x7E);
     }
-    else if (!m_rxBuffer.recvd_len_msb)
+    else if (m_rxBuffer.bytes_recvd == 1)
     {
-      m_rxBuffer.recvd_len_msb = true;
       m_rxBuffer.length = recvd << 8;
     }
-    else if (!m_rxBuffer.recvd_len_lsb)
+    else if (m_rxBuffer.bytes_recvd == 2)
     {
-      m_rxBuffer.recvd_len_lsb = true;
       m_rxBuffer.length += recvd;
     }
-    else if (!m_rxBuffer.recvd_frameType)
+    else if (m_rxBuffer.bytes_recvd == 3)
     {
-      m_rxBuffer.recvd_frameType = true;
       m_rxBuffer.frameType = recvd;
     }
-    else if (m_rxBuffer.frameData.length() != m_rxBuffer.length-1) // -1 to account for the frameType
+    else if (m_rxBuffer.bytes_recvd == 4)
     {
-      m_rxBuffer.frameData += (char) recvd; // use a char here because that is probably what append is
+      m_rxBuffer.frameID = recvd;
+    }
+    else if (m_rxBuffer.bytes_recvd - 3 < m_rxBuffer.length) // The first three bits are not in the length
+    {
+      m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 3] = (char) recvd; // use a char here because that is probably what append is
       // defined for
     }
     else
@@ -136,17 +165,21 @@ userPacket XBee::read()
       m_rxBuffer.recvd_checksum = true;
       m_rxBuffer.checksum = recvd;
     }
+    if (m_rxBuffer.recvd_start)
+      (m_rxBuffer.bytes_recvd)++;
   }
   // if we are done looping because we received the checksum
   if (m_rxBuffer.recvd_checksum)
   {
-    // calculate the checksum
-    uint8_t my_checksum = m_rxBuffer.frameType; // frameType is technically the start of frameData
-    for (unsigned int i = 0; i < m_rxBuffer.frameData.length(); i++)
+    // verify the checksum
+    uint8_t verify = m_rxBuffer.frameType + m_rxBuffer.frameID;
+    for (unsigned i = 0; i < (m_rxBuffer.length - 2); i++)
     {
-      my_checksum += (uint8_t) m_rxBuffer.frameData.charAt(i);
+      if (i < m_rxBuffer.MAX_BUFFER_SIZE)
+        verify += (uint8_t) m_rxBuffer.frameData[i];
     }
-    if (m_rxBuffer.recvd_checksum == my_checksum)
+    verify += m_rxBuffer.checksum;
+    if (verify == 0xFF)
       return userPacket{m_rxBuffer.frameType, m_rxBuffer.frameData};
     else // poo poo packet, clear the buffer and return nothing to our poor user :(
       m_rxBuffer = {};
