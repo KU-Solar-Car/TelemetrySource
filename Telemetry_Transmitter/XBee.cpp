@@ -24,7 +24,7 @@ packet& packet::operator=(const packet& other)
   length = other.length;
   frameType = other.frameType;
   frameID = other.frameID;
-  for (unsigned i = 0; i < (length-2); i++)
+  for (unsigned i = 0; i < (length-2) && i < MAX_BUFFER_SIZE; i++)
   {
     frameData[i] = '\0'; // clear the frameData
   }
@@ -173,10 +173,9 @@ userPacket XBee::read()
   {
     // verify the checksum
     uint8_t verify = m_rxBuffer.frameType + m_rxBuffer.frameID;
-    for (unsigned i = 0; i < (m_rxBuffer.length - 2); i++)
+    for (unsigned i = 0; i < (m_rxBuffer.length - 2) && i < m_rxBuffer.MAX_BUFFER_SIZE; i++)
     {
-      if (i < m_rxBuffer.MAX_BUFFER_SIZE)
-        verify += (uint8_t) m_rxBuffer.frameData[i];
+      verify += (uint8_t) m_rxBuffer.frameData[i];
     }
     verify += m_rxBuffer.checksum;
     if (verify == 0xFF)
