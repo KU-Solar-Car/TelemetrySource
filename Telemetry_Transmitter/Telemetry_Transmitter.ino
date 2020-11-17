@@ -70,7 +70,7 @@ void shutdownOnCommand()
   {
     SerialUSB.println("Shutting down, please wait about 30 seconds...");
     if (SerialUSB.read() != 'c')
-      xbee.shutdown();
+      xbee.shutdown(15000);
     else
     {
       if (xbee.shutdownCommandMode())

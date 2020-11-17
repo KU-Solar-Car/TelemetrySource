@@ -4,14 +4,14 @@ int MonitoredSerial::read(void)
 {
   int temp = m_toMonitor.read();
   if (temp != -1)
-    m_listener.write(temp);
+    m_listener.print("0x" + String(temp, HEX) + " ");
   return temp;
 }
 
 size_t MonitoredSerial::write(uint8_t n)
 {
   m_toMonitor.write(n);
-  m_listener.write(n);
+  m_listener.print("0x" + String(n, HEX) + " ");
   return 1;
 }
 

@@ -26,12 +26,24 @@ packet& packet::operator=(const packet& other)
   frameID = other.frameID;
   for (unsigned i = 0; i < (length-2) && i < MAX_BUFFER_SIZE; i++)
   {
-    frameData[i] = '\0'; // clear the frameData
+    frameData[i] = '\0'; // clear the frameData but don't deallocate it
   }
   memcpy(frameData, other.frameData, length-2); // copy the new frameData over
   recvd_checksum = other.recvd_checksum;
   checksum = other.checksum;
 }
+
+
+bool userPacket::operator==(const userPacket& other)
+{
+  return (
+    frameType == other.frameType
+    && frameID == other.frameID
+    && frameDataLength == other.frameDataLength
+    && frameData == other.frameData
+  );
+}
+
 
 bool XBee::configure(const String& server)
 {
@@ -49,6 +61,7 @@ bool XBee::configure(const String& server)
   m_serial.write("CN\r");
   return true;
 }
+
 void XBee::sendFrame(byte frameType, byte frameID, const char frameData[], size_t frameDataLen)
 {
   uint16_t checksum = frameType + frameID;
@@ -60,11 +73,6 @@ void XBee::sendFrame(byte frameType, byte frameID, const char frameData[], size_
   const uint8_t start = 0x7E;
   byte len_msb = (uint8_t) (len >> 8);
   byte len_lsb = (uint8_t) len;
-
-  SerialUSB.println("Length of frameData: " + String(len));
-  SerialUSB.println("MSB: " + String(len_msb));
-  SerialUSB.println("LSB: " + String(len_lsb));
-  SerialUSB.println("checksum: " + String(checksum));
 
   m_serial.write(start);
   m_serial.write(len_msb);
@@ -85,21 +93,37 @@ void XBee::sendFrame(byte frameType, byte frameID, const char frameData[], size_
   */
 }
 
-void XBee::sendATCommand(const char command[], const char param[], size_t paramLen)
+void XBee::sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen)
 {
-  SerialUSB.println("Length of command: 2");
-  SerialUSB.println("Length of param: " + String(paramLen));
-  SerialUSB.println("Length of frame type: 1");
   char* temp = new char[2 + paramLen];
   memcpy(temp, command, 2);
   memcpy(temp+2, param, paramLen);
-  sendFrame(0x08, 0x01, temp, 2+paramLen);
+  sendFrame(0x08, frameID, temp, 2+paramLen);
   delete[] temp;
 }
 
-void XBee::shutdown()
+void XBee::shutdown(unsigned int timeout)
 {
-  sendATCommand("SD", (char) 0x00, 1);
+  sendATCommand(1, "SD", (char) 0x00, 1);
+  unsigned int startTime = millis();
+  userPacket response;
+  do
+  {
+    response = read();
+  } while (response == NULL_USER_PACKET && millis() < (startTime + timeout));
+  if (!(response == NULL_USER_PACKET))
+  {
+    SerialUSB.println("Got response:");
+    SerialUSB.println("Frame type: " + String(response.frameType));
+    SerialUSB.println("Frame ID: " + String(response.frameID));
+    SerialUSB.println("Command: " + String(response.frameData[0]) + String(response.frameData[1]));
+    SerialUSB.println("Status: " + String((uint8_t)response.frameData[3]));
+  }
+  else
+  {
+    SerialUSB.println("Timed Out.");
+  }
+  
 }
 
 bool XBee::shutdownCommandMode()
@@ -179,7 +203,7 @@ userPacket XBee::read()
     }
     verify += m_rxBuffer.checksum;
     if (verify == 0xFF)
-      return userPacket{m_rxBuffer.frameType, m_rxBuffer.frameData};
+      return {m_rxBuffer.frameType, m_rxBuffer.frameID, m_rxBuffer.frameData, m_rxBuffer.length - 2};
     else // poo poo packet, clear the buffer and return nothing to our poor user :(
       m_rxBuffer = {};
   }

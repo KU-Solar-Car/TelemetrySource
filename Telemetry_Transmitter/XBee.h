@@ -27,11 +27,14 @@ struct packet
 
 struct userPacket
 {
-  const uint8_t& frameType;
-  const char* const frameData;
+  bool operator==(const userPacket& other);
+  uint8_t frameType;
+  uint8_t frameID;
+  const char* frameData;
+  uint16_t frameDataLength;
 };
 
-const userPacket NULL_USER_PACKET = {0, nullptr};
+const userPacket NULL_USER_PACKET = {0, 0, nullptr, 0};
 
 class XBee
 {
@@ -40,7 +43,7 @@ class XBee
   packet m_rxBuffer;
 
   public:
-  XBee(MonitoredSerial& serial) : m_serial(serial) {}
+  XBee(MonitoredSerial& serial) : m_serial(serial){}
   bool configure(const String& server);
   void openConnection();
   void closeConnection();
@@ -48,9 +51,9 @@ class XBee
   userPacket read(); // Can read one full packet at a time.
   bool waitFor(const String& message, int timeout);
   bool shutdownCommandMode();
-  void shutdown();
+  void shutdown(unsigned int timeout);
   void sendFrame(byte frameType, byte frameID, const char frameData[], size_t frameDataLen);
-  void sendATCommand(const char command[], const char param[], size_t paramLen);
+  void sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen);
 };
 
 #endif
