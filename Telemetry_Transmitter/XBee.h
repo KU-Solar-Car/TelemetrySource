@@ -8,33 +8,9 @@
 
 #include <Arduino.h>
 #include "MonitoredSerial.h"
+#include "Frames.h"
 
-struct packet
-{
-  const uint16_t MAX_BUFFER_SIZE = 1550;
-  packet();
-  ~packet();
-  packet& operator=(const packet& other);
-  bool recvd_start;
-  uint16_t bytes_recvd;
-  uint16_t length;
-  uint8_t frameType;
-  uint8_t frameID;
-  char* frameData;
-  bool recvd_checksum;
-  uint8_t checksum;
-};
 
-struct userPacket
-{
-  bool operator==(const userPacket& other);
-  uint8_t frameType;
-  uint8_t frameID;
-  const char* frameData;
-  uint16_t frameDataLength;
-};
-
-const userPacket NULL_USER_PACKET = {0, 0, nullptr, 0};
 
 class XBee
 {

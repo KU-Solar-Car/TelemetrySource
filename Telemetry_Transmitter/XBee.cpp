@@ -4,45 +4,8 @@
  * Description: Implementation of the XBee class
  */
 #include "XBee.h"
+#include "Frames.h"
 #include <Arduino.h>
-
-packet::packet()
-{
-  // Helps prevent heap fragmentation (even though it's very possible in the rest of my code :/)
-  frameData = new char[MAX_BUFFER_SIZE];
-}
-
-packet::~packet()
-{
-  delete[] frameData;
-}
-
-packet& packet::operator=(const packet& other)
-{
-  recvd_start = other.recvd_start;
-  bytes_recvd = other.bytes_recvd;
-  length = other.length;
-  frameType = other.frameType;
-  frameID = other.frameID;
-  for (unsigned i = 0; i < (length-2) && i < MAX_BUFFER_SIZE; i++)
-  {
-    frameData[i] = '\0'; // clear the frameData but don't deallocate it
-  }
-  memcpy(frameData, other.frameData, length-2); // copy the new frameData over
-  recvd_checksum = other.recvd_checksum;
-  checksum = other.checksum;
-}
-
-
-bool userPacket::operator==(const userPacket& other)
-{
-  return (
-    frameType == other.frameType
-    && frameID == other.frameID
-    && frameDataLength == other.frameDataLength
-    && frameData == other.frameData
-  );
-}
 
 
 bool XBee::configure(const String& server)
