@@ -76,15 +76,15 @@ void XBee::shutdown(unsigned int timeout)
   } while (response == NULL_USER_PACKET && millis() < (startTime + timeout));
   if (!(response == NULL_USER_PACKET))
   {
-    SerialUSB.println("Got response:");
-    SerialUSB.println("Frame type: " + String(response.frameType));
-    SerialUSB.println("Frame ID: " + String(response.frameID));
-    SerialUSB.println("Command: " + String(response.frameData[0]) + String(response.frameData[1]));
-    SerialUSB.println("Status: " + String((uint8_t)response.frameData[3]));
+    Serial.println("Got response:");
+    Serial.println("Frame type: " + String(response.frameType, HEX));
+    Serial.println("Frame ID: " + String(response.frameData[0], HEX));
+    Serial.println("Command: " + String(response.frameData[1]) + String(response.frameData[2]));
+    Serial.println("Status: " + String((uint8_t)response.frameData[3]));
   }
   else
   {
-    SerialUSB.println("Timed Out.");
+    Serial.println("Timed Out.");
   }
   
 }

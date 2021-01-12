@@ -6,7 +6,7 @@
 class MonitoredSerial: public Stream
 {
   public:
-  MonitoredSerial(HardwareSerial& toMonitor, Serial_& listener) : 
+  MonitoredSerial(Stream& toMonitor, Stream& listener) : 
    m_toMonitor(toMonitor), m_listener(listener) {}
   int read(void);
   size_t write(uint8_t);
@@ -20,8 +20,8 @@ class MonitoredSerial: public Stream
   void flush();
   
   private:
-  HardwareSerial& m_toMonitor;
-  Serial_& m_listener;
+  Stream& m_toMonitor;
+  Stream& m_listener;
 };
 
 #endif

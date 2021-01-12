@@ -5,28 +5,28 @@ const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
 byte maxTemp;
 unsigned long nextTimeWeSendPacket;
-MonitoredSerial mySerial(Serial, SerialUSB);
+MonitoredSerial mySerial(Serial1, Serial);
 XBee xbee(mySerial);
 
 void setup()
 {
   Serial.begin(9600);
-  SerialUSB.begin(9600);
+  Serial1.begin(9600);
   
   delay(5000);
   if(xbee.configure(""))
-    SerialUSB.println("Configuration successful");
+    Serial.println("Configuration successful");
   else
-    SerialUSB.println("Configuration failed");
+    Serial.println("Configuration failed");
   maxTemp = -128;
   nextTimeWeSendPacket = 0;
   // Set the serial interface baud rate
     // Initialize both CAN controllers
-  SerialUSB.println("Test");  
+  Serial.println("Test");  
   if(canInit(0, CAN_BPS_250K) == CAN_OK)
-    SerialUSB.print("CAN0: Initialized Successfully.\n\r");
+    Serial.print("CAN0: Initialized Successfully.\n\r");
   else
-    SerialUSB.print("CAN0: Initialization Failed.\n\r");
+    Serial.print("CAN0: Initialization Failed.\n\r");
 }
 
 void loop()
@@ -61,29 +61,29 @@ void sendMaxTempEveryFiveSeconds()
 
 void printReceivedPacket()
 {
-  const String& data = xbee.read().frameData;
+  // xbee.read();
 }
 
 void shutdownOnCommand()
 {
-  if (SerialUSB.read() == 's')
+  if (Serial.read() == 's')
   {
-    SerialUSB.println("Shutting down, please wait about 30 seconds...");
-    if (SerialUSB.read() != 'c')
+    Serial.println("Shutting down, please wait about 30 seconds...");
+    if (Serial.read() != 'c')
       xbee.shutdown(15000);
     else
     {
       if (xbee.shutdownCommandMode())
-        SerialUSB.println("Shutdown successful");
+        Serial.println("Shutdown successful");
       else
-        SerialUSB.println("Shutdown failed");
+        Serial.println("Shutdown failed");
     }
   }
 }
 
 void printTemperature(byte temp)
 {
-  SerialUSB.print("High Temperature: ");
-  SerialUSB.print(temp);
-  SerialUSB.print("\n\r");
+  Serial.print("High Temperature: ");
+  Serial.print(temp);
+  Serial.print("\n\r");
 }
