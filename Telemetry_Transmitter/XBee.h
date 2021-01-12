@@ -24,11 +24,11 @@ class XBee
   void openConnection();
   void closeConnection();
   void sendPacket(const String& message);
-  userPacket read(); // Can read one full packet at a time.
+  userPacket read(unsigned timeout); // Can read one full packet at a time.
   bool waitFor(const String& message, int timeout);
   bool shutdownCommandMode();
   void shutdown(unsigned int timeout);
-  void sendFrame(byte frameType, byte frameID, const char frameData[], size_t frameDataLen);
+  void sendFrame(const byte& frameType, const char frameData[], size_t frameDataLen);
   void sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen);
 };
 
