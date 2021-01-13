@@ -62,7 +62,7 @@ void XBee::shutdown(unsigned int timeout)
   userPacket response;
   do
   {
-    response = read(timeout);
+    response = read();
   } while (response.frameData[0] != 1 && millis() < (startTime + timeout));
   if (!(response == NULL_USER_PACKET))
   {
@@ -97,69 +97,58 @@ bool XBee::shutdownCommandMode()
   return true;
 }
 
-userPacket XBee::read(unsigned timeout)
-{
-  uint8_t verify = 0;
-  uint16_t frameDataLength = 0;
-  uint16_t fullPacketLength = 0;
-  unsigned start = millis();
-  // ------------------------------------------------------------------------------------------------
-  // First get the start delimiter and length
-  for (int recvd = m_serial.read(); m_rxBuffer.bytes_recvd < 3; recvd = m_serial.read())
+userPacket XBee::read()
+{ 
+  for (int recvd = m_serial.read(); recvd != -1 && (m_rxBuffer.bytes_recvd < 3 || m_rxBuffer.bytes_recvd < m_rxBuffer.length + 4); recvd = m_serial.read())
   {
-    if (recvd != -1)
+    if (m_rxBuffer.bytes_recvd == 1)
     {
-      if (m_rxBuffer.bytes_recvd == 0 && recvd == 0x7E)
-        m_rxBuffer.start = true;
-      else if (m_rxBuffer.bytes_recvd == 1)
-      {
-        m_rxBuffer.length = recvd << 8;
-      }
-      else if (m_rxBuffer.bytes_recvd == 2)
-      {
-        m_rxBuffer.length += recvd;
-      }
-    if (m_rxBuffer.start)
-      m_rxBuffer.bytes_recvd++;
+      m_rxBuffer.length = recvd << 8;
     }
-  }
-  frameDataLength = m_rxBuffer.length - 1;
-  fullPacketLength = m_rxBuffer.length + 4;
-  // ----------------------------------------------------------------------------------------------------------------
-  // Now get the rest of the packet
-  for (int recvd = m_serial.read(); m_rxBuffer.bytes_recvd < fullPacketLength; recvd = m_serial.read())
-  {
-    if (recvd != -1)
+    else if (m_rxBuffer.bytes_recvd == 2)
     {
-      if (m_rxBuffer.bytes_recvd == 3)
-      {
-        m_rxBuffer.frameType = recvd;
-        verify += recvd; 
-      }
-      else if (m_rxBuffer.bytes_recvd < frameDataLength + 4) // The first three bits are not in the length
-      {
-        m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 4] = (char) recvd; // use a char here because that is probably what append is defined for
-        verify += recvd;
-      }
-      else
-      {
-        m_rxBuffer.checksum = recvd;
-        verify += recvd;
-      }
-      m_rxBuffer.bytes_recvd++;
+      m_rxBuffer.length += recvd;
     }
+    else if (m_rxBuffer.bytes_recvd == 3)
+    {
+      m_rxBuffer.frameType = recvd;
+    }
+    else if (m_rxBuffer.bytes_recvd - 3 < m_rxBuffer.length) // The first three bytes don't count
+    {
+      m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 4] = (char) recvd; // use a char here because that is probably what append is defined for
+    }
+    else
+    {
+      m_rxBuffer.checksum = recvd;
+    }
+    if ((m_rxBuffer.bytes_recvd == 0 && recvd == 0x7E) || m_rxBuffer.bytes_recvd > 0)
+      m_rxBuffer.bytes_recvd++;
   }
-  // ------------------------------------------------------------------------
-  m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a packet next time
-  m_rxBuffer.start = false;
-  if (verify == 0xFF)
+
+  if (m_rxBuffer.bytes_recvd >= 3 && m_rxBuffer.bytes_recvd == m_rxBuffer.length + 4)
   {
-    Serial.print("Packet is verified");
-    return {m_rxBuffer.frameType, m_rxBuffer.frameData, (m_rxBuffer.length - 1)};
+    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a packet next time
+  
+    uint8_t verify = m_rxBuffer.frameType;
+    for (int i = 0; i < m_rxBuffer.length - 1; i++) // -1 because we already started with frameType, and length includes frameType and frameData.
+    {
+      verify += m_rxBuffer.frameData[i];
+    }
+    verify += m_rxBuffer.checksum;
+    
+    if (verify == 0xFF)
+    {
+      Serial.print("Packet is verified\n");
+      return {m_rxBuffer.frameType, m_rxBuffer.frameData, (m_rxBuffer.length - 1)};
+    }
+    else
+    { // poo poo packet, return nothing to our poor user :(
+      Serial.print("Failed to verify packet. verify=" + String(verify, HEX) + " bytes_recvd=" + String(m_rxBuffer.bytes_recvd) + "\n");
+      return NULL_USER_PACKET;
+    }
   }
   else
-  { // poo poo packet, clear the buffer and return nothing to our poor user :(
-    Serial.print("Failed to verify packet " + String(verify, HEX) + " " + String(m_rxBuffer.bytes_recvd));
+  {
     return NULL_USER_PACKET;
   }
 }

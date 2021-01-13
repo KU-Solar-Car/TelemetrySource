@@ -10,7 +10,6 @@ struct packet
   ~packet();
   packet& operator=(const packet& other);
 
-  bool start;
   uint16_t bytes_recvd;
   uint16_t length;
   uint8_t frameType;

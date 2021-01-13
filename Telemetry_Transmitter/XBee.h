@@ -24,7 +24,7 @@ class XBee
   void openConnection();
   void closeConnection();
   void sendPacket(const String& message);
-  userPacket read(unsigned timeout); // Can read one full packet at a time.
+  userPacket read(); // Can read one full packet at a time.
   bool waitFor(const String& message, int timeout);
   bool shutdownCommandMode();
   void shutdown(unsigned int timeout);
