@@ -28,14 +28,14 @@ bool XBee::configure(const String& server)
 void XBee::sendFrame(const byte& frameType, const char frameData[], size_t frameDataLen)
 {
   uint16_t checksum = frameType;
-  uint16_t len = frameDataLen + 1; // length of frameData + length of frameType
+  uint16_t frameLength = frameDataLen + 1; // length of frameData + length of frameType
   for (uint16_t i = 0; i < frameDataLen; i++)
     checksum += frameData[i];
   checksum = 0xFF - checksum;
 
   const uint8_t start = 0x7E;
-  byte len_msb = (uint8_t) (len >> 8);
-  byte len_lsb = (uint8_t) len;
+  byte len_msb = (uint8_t) (frameLength >> 8);
+  byte len_lsb = (uint8_t) frameLength;
 
   m_serial.write(start);
   m_serial.write(len_msb);
@@ -99,23 +99,23 @@ bool XBee::shutdownCommandMode()
 
 userFrame XBee::read()
 { 
-  for (int recvd = m_serial.read(); recvd != -1 && (m_rxBuffer.bytes_recvd < 3 || m_rxBuffer.bytes_recvd < m_rxBuffer.length + 4); recvd = m_serial.read())
+  for (int recvd = m_serial.read(); recvd != -1 && (m_rxBuffer.bytes_recvd < m_rxBuffer.length()); recvd = m_serial.read())
   {
     if (m_rxBuffer.bytes_recvd == 1)
     {
-      m_rxBuffer.length = recvd << 8;
+      m_rxBuffer.frameLength = recvd << 8;
     }
     else if (m_rxBuffer.bytes_recvd == 2)
     {
-      m_rxBuffer.length += recvd;
+      m_rxBuffer.frameLength += recvd;
     }
     else if (m_rxBuffer.bytes_recvd == 3)
     {
       m_rxBuffer.frameType = recvd;
     }
-    else if (m_rxBuffer.bytes_recvd - 3 < m_rxBuffer.length) // The first three bytes don't count
+    else if (m_rxBuffer.frameDataRecvd() < m_rxBuffer.frameDataLength())
     {
-      m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 4] = (char) recvd; // use a char here because that is probably what append is defined for
+      m_rxBuffer.frameData[m_rxBuffer.frameDataRecvd()] = (char) recvd; // use a char here because that is probably what append is defined for
     }
     else
     {
@@ -125,12 +125,12 @@ userFrame XBee::read()
       m_rxBuffer.bytes_recvd++;
   }
 
-  if (m_rxBuffer.bytes_recvd >= 3 && m_rxBuffer.bytes_recvd == m_rxBuffer.length + 4)
+  if (m_rxBuffer.bytes_recvd == m_rxBuffer.length())
   {
     m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a frame next time
   
     uint8_t verify = m_rxBuffer.frameType;
-    for (int i = 0; i < m_rxBuffer.length - 1; i++) // -1 because we already started with frameType, and length includes frameType and frameData.
+    for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
     {
       verify += m_rxBuffer.frameData[i];
     }
@@ -139,7 +139,7 @@ userFrame XBee::read()
     if (verify == 0xFF)
     {
       Serial.print("Frame is verified\n");
-      return {m_rxBuffer.frameType, m_rxBuffer.frameData, (m_rxBuffer.length - 1)};
+      return {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
     }
     else
     { // poo poo frame, return nothing to our poor user :(
