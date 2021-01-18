@@ -1,10 +1,11 @@
 #include "DueCANLayer.h"
 #include "XBee.h"
+#include "MonitoredSerial.h"
 
 const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
 byte maxTemp;
-unsigned long nextTimeWeSendPacket;
+unsigned long nextTimeWeSendFrame;
 MonitoredSerial mySerial(Serial1, Serial);
 XBee xbee(mySerial);
 
@@ -19,7 +20,7 @@ void setup()
   else
     Serial.println("Configuration failed");
   maxTemp = -128;
-  nextTimeWeSendPacket = 0;
+  nextTimeWeSendFrame = 0;
   // Set the serial interface baud rate
     // Initialize both CAN controllers
   Serial.println("Test");  
@@ -32,7 +33,7 @@ void setup()
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
-  printReceivedPacket();
+  printReceivedFrame();
   shutdownOnCommand();
 }
 
@@ -51,15 +52,15 @@ void sendMaxTempEveryFiveSeconds()
     }
   } // end if
 
-  if (millis() >= nextTimeWeSendPacket)
+  if (millis() >= nextTimeWeSendFrame)
   {
-    nextTimeWeSendPacket += DELAY;
+    nextTimeWeSendFrame += DELAY;
     printTemperature(maxTemp);
     maxTemp = BYTE_MIN;
   }
 }
 
-void printReceivedPacket()
+void printReceivedFrame()
 {
   // xbee.read();
 }

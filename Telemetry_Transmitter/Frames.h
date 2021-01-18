@@ -3,12 +3,12 @@
 
 #include <Arduino.h>
 
-struct packet
+struct frame
 {
   const uint16_t MAX_BUFFER_SIZE = 1550;
-  packet();
-  ~packet();
-  packet& operator=(const packet& other);
+  frame();
+  ~frame();
+  frame& operator=(const frame& other);
 
   uint16_t bytes_recvd;
   uint16_t length;
@@ -17,15 +17,15 @@ struct packet
   uint8_t checksum;
 };
 
-struct userPacket
+struct userFrame
 {
-  bool operator==(const userPacket& other);
+  bool operator==(const userFrame& other);
   
   uint8_t frameType;
   const char* frameData;
   uint16_t frameDataLength;
 };
 
-const userPacket NULL_USER_PACKET = {0, nullptr, 0};
+const userFrame NULL_USER_FRAME = {0, nullptr, 0};
 
 #endif

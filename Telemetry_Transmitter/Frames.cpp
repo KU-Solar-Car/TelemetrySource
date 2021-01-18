@@ -1,17 +1,19 @@
 #include "Frames.h"
 
-packet::packet()
+frame::frame()
 {
   // Helps prevent heap fragmentation (even though it's very possible in the rest of my code :/)
   frameData = new char[MAX_BUFFER_SIZE];
 }
 
-packet::~packet()
+frame::~frame()
 {
   delete[] frameData;
 }
 
-packet& packet::operator=(const packet& other)
+
+
+frame& frame::operator=(const frame& other)
 {
   bytes_recvd = other.bytes_recvd;
   length = other.length;
@@ -28,7 +30,7 @@ packet& packet::operator=(const packet& other)
   checksum = other.checksum;
 }
 
-bool userPacket::operator==(const userPacket& other)
+bool userFrame::operator==(const userFrame& other)
 {
   return (
     frameType == other.frameType

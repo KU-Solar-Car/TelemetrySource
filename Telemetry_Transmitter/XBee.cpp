@@ -59,12 +59,12 @@ void XBee::shutdown(unsigned int timeout)
 {
   sendATCommand(1, "SD", (char) 0x00, 1);
   unsigned int startTime = millis();
-  userPacket response;
+  userFrame response;
   do
   {
     response = read();
   } while (response.frameData[0] != 1 && millis() < (startTime + timeout));
-  if (!(response == NULL_USER_PACKET))
+  if (!(response == NULL_USER_FRAME))
   {
     Serial.println("Got response:");
     Serial.println("Frame type: " + String(response.frameType, HEX));
@@ -97,7 +97,7 @@ bool XBee::shutdownCommandMode()
   return true;
 }
 
-userPacket XBee::read()
+userFrame XBee::read()
 { 
   for (int recvd = m_serial.read(); recvd != -1 && (m_rxBuffer.bytes_recvd < 3 || m_rxBuffer.bytes_recvd < m_rxBuffer.length + 4); recvd = m_serial.read())
   {
@@ -127,7 +127,7 @@ userPacket XBee::read()
 
   if (m_rxBuffer.bytes_recvd >= 3 && m_rxBuffer.bytes_recvd == m_rxBuffer.length + 4)
   {
-    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a packet next time
+    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a frame next time
   
     uint8_t verify = m_rxBuffer.frameType;
     for (int i = 0; i < m_rxBuffer.length - 1; i++) // -1 because we already started with frameType, and length includes frameType and frameData.
@@ -138,17 +138,17 @@ userPacket XBee::read()
     
     if (verify == 0xFF)
     {
-      Serial.print("Packet is verified\n");
+      Serial.print("Frame is verified\n");
       return {m_rxBuffer.frameType, m_rxBuffer.frameData, (m_rxBuffer.length - 1)};
     }
     else
-    { // poo poo packet, return nothing to our poor user :(
-      Serial.print("Failed to verify packet. verify=" + String(verify, HEX) + " bytes_recvd=" + String(m_rxBuffer.bytes_recvd) + "\n");
-      return NULL_USER_PACKET;
+    { // poo poo frame, return nothing to our poor user :(
+      Serial.print("Failed to verify frame. verify=" + String(verify, HEX) + " bytes_recvd=" + String(m_rxBuffer.bytes_recvd) + "\n");
+      return NULL_USER_FRAME;
     }
   }
   else
   {
-    return NULL_USER_PACKET;
+    return NULL_USER_FRAME;
   }
 }
