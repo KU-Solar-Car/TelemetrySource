@@ -127,25 +127,27 @@ userFrame XBee::read()
 
   if (m_rxBuffer.bytes_recvd == m_rxBuffer.length())
   {
-    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a frame next time
-  
     uint8_t verify = m_rxBuffer.frameType;
     for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
     {
       verify += m_rxBuffer.frameData[i];
     }
     verify += m_rxBuffer.checksum;
-    
+
+    userFrame ret;
     if (verify == 0xFF)
     {
       Serial.print("Frame is verified\n");
-      return {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
+      ret = {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
     }
     else
     { // poo poo frame, return nothing to our poor user :(
       Serial.print("Failed to verify frame. verify=" + String(verify, HEX) + " bytes_recvd=" + String(m_rxBuffer.bytes_recvd) + "\n");
-      return NULL_USER_FRAME;
+      ret = NULL_USER_FRAME;
     }
+    
+    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a frame next time
+    return ret;
   }
   else
   {
