@@ -8,7 +8,7 @@
 #include <Arduino.h>
 
 
-bool XBee::configure(const String& server)
+bool XBee::configure()
 {
   m_serial.write("+++");
   delay(1500);

@@ -20,12 +20,8 @@ class XBee
 
   public:
   XBee(MonitoredSerial& serial) : m_serial(serial){}
-  bool configure(const String& server);
-  void openConnection();
-  void closeConnection();
-  void sendFrame(const String& message);
+  bool configure();
   userFrame read(); // Can read one full packet at a time.
-  bool waitFor(const String& message, int timeout);
   bool shutdownCommandMode();
   void shutdown(unsigned int timeout);
   void sendFrame(const byte& frameType, const char frameData[], size_t frameDataLen);

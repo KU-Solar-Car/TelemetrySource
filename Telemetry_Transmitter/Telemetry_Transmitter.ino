@@ -15,7 +15,7 @@ void setup()
   Serial1.begin(9600);
   
   delay(5000);
-  if(xbee.configure(""))
+  if(xbee.configure())
     Serial.println("Configuration successful");
   else
     Serial.println("Configuration failed");
