@@ -5,6 +5,7 @@
  */
 #include "XBee.h"
 #include "Frames.h"
+#include "IPAddress.h"
 #include <Arduino.h>
 
 
@@ -153,4 +154,22 @@ userFrame XBee::read()
   {
     return NULL_USER_FRAME;
   }
+}
+
+void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t options, const char payload[], size_t payloadLength)
+{
+  size_t bufSize = 11 + payloadLength;
+  char* buf = new char[bufSize];
+  buf[0] = 0; // frameID = 0
+  uint32_t addr_array = address;
+  memcpy(buf+1, &addr_array, 4);
+  memcpy(buf+5, &destPort, 2);
+  memcpy(buf+7, &sourcePort, 2);
+  buf[9] = 0x04;
+  buf[10] = options;
+  memcpy(buf+11, &payload, payloadLength);
+
+  sendFrame(0x20, buf, bufSize);
+
+  delete[] buf;
 }
