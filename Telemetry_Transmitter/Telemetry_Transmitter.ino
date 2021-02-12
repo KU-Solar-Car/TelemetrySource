@@ -1,6 +1,7 @@
 #include "DueCANLayer.h"
 #include "XBee.h"
 #include "MonitoredSerial.h"
+#include "Stats.h"
 
 const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
@@ -8,6 +9,9 @@ byte maxTemp;
 unsigned long nextTimeWeSendFrame;
 MonitoredSerial mySerial(Serial1, Serial);
 XBee xbee(mySerial);
+
+const size_t REQUEST_BUFFER_SIZE = 488;
+char requestBuffer[REQUEST_BUFFER_SIZE];
 
 void setup()
 {
@@ -28,12 +32,16 @@ void setup()
     Serial.print("CAN0: Initialized Successfully.\n\r");
   else
     Serial.print("CAN0: Initialization Failed.\n\r");
+
+  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
+
 }
 
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   printReceivedFrame();
+  sendStats();
   shutdownOnCommand();
 }
 
@@ -51,7 +59,6 @@ void sendMaxTempEveryFiveSeconds()
         maxTemp = cRxData[4];
     }
   } // end if
-
   if (millis() >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame += DELAY;
@@ -87,4 +94,14 @@ void printTemperature(byte temp)
   Serial.print("High Temperature: ");
   Serial.print(temp);
   Serial.print("\n\r");
+}
+
+void sendStats(Stats stats)
+{
+  unsigned positionInString = 0;
+  strcat(requestBuffer, "{");
+  if 
+  \"battery_voltage\":%06f,\"battery_current\":%06f,\"battery_temperature\":%06f,\"bms_fault\":%d,\"gps_time\":%06f,\"gps_lat\":%06f,\"gps_lon\":%06f,\"gps_velocity_east\":%06f,\"gps_velocity_north\":%06f,\"gps_velocity_up\":%06f,\"gps_speed\":%06f,\"solar_voltage\":%06f,\"solar_current\":%06f,\"motor_speed\":%06f}";
+  request
+  
 }
