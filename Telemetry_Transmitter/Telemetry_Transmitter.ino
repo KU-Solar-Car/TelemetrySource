@@ -97,37 +97,46 @@ void printTemperature(byte temp)
 
 void sendStats(Stats stats)
 {
-  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
+  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
   strcat(requestBuffer, "{");
+  int bodyLength = 2;
   for (int i = 0; i < StatData::_LAST; i++)
   {
     if (stats[i].present)
     {
-      toKeyValuePair(requestBuffer + strlen(requestBuffer), stats[i].value); // append the key-value pair
+      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), stats[i].value); // append the key-value pair
       strcat(requestBuffer, ",");
     }
     strcat(requestBuffer, "}");
   }
-  
+  setContentLengthHeader(requestBuffer, bodyLength);
+
+  xbee.sendTCP("216.58.192.212", 5000, 
 }
 
-void toKeyValuePair(char* dest, StatData data)
+void setContentLegnthHeader(char* dest, int len)
+{
+  char* contentLength = strstr(dest, "Content-Length: ") + 16;
+  sprintf(contentLength, "%03u", len);
+}
+
+int toKeyValuePair(char* dest, StatData data)
 {
   switch(data.name)
   {
-    case StatData::BATT_VOLTAGE: sprintf(dest, "\"battery_voltage\":%06f", data.doubleVal); break;
-    case StatData::BATT_CURRENT: sprintf(dest, "\"battery_current\":%06f", data.doubleVal); break;
-    case StatData::BATT_TEMP: sprintf(dest, "\"battery_temperature\":%06f", data.doubleVal); break;
-    case StatData::BMS_FAULT: sprintf(dest, "\"bms_fault\":%d", data.boolVal); break;
-    case StatData::GPS_TIME: sprintf(dest, "\"gps_time\":%06f", data.uIntVal); break;
-    case StatData::GPS_LAT: sprintf(dest, "\"gps_lat\":%06f", data.doubleVal); break;
-    case StatData::GPS_LON: sprintf(dest, "\"gps_lon\":%06f", data.doubleVal); break;
-    case StatData::GPS_VEL_EAST: sprintf(dest, "\"gps_velocity_east\":%06f", data.doubleVal); break;
-    case StatData::GPS_VEL_NOR: sprintf(dest, "\"gps_velocity_north\":%06f", data.doubleVal); break;
-    case StatData::GPS_VEL_UP: sprintf(dest, "\"gps_velocity_up\":%06f", data.doubleVal); break;
-    case StatData::GPS_SPD: sprintf(dest, "\"gps_speed\":%06f", data.doubleVal); break;
-    case StatData::SOLAR_VOLTAGE: sprintf(dest, "\"solar_voltage\":%06f", data.doubleVal); break;
-    case StatData::SOLAR_CURRENT: sprintf(dest, "\"solar_current\":%06f", data.doubleVal); break;
-    case StatData::MOTOR_SPD: sprintf(dest, "\"motor_speed\":%06f", data.doubleVal); break;
+    case StatData::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.doubleVal); break;
+    case StatData::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.doubleVal); break;
+    case StatData::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.doubleVal); break;
+    case StatData::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.boolVal); break;
+    case StatData::GPS_TIME: return sprintf(dest, "\"gps_time\":%6f", data.uIntVal); break;
+    case StatData::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.doubleVal); break;
+    case StatData::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.doubleVal); break;
+    case StatData::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.doubleVal); break;
+    case StatData::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.doubleVal); break;
+    case StatData::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.doubleVal); break;
+    case StatData::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.doubleVal); break;
+    case StatData::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.doubleVal); break;
+    case StatData::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.doubleVal); break;
+    case StatData::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.doubleVal); break;
   }
 }
