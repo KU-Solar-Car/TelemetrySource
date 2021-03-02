@@ -2,6 +2,7 @@
 #include "XBee.h"
 #include "MonitoredSerial.h"
 #include "Stats.h"
+#include "IPAddress.h"
 
 const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
@@ -12,6 +13,8 @@ XBee xbee(mySerial);
 
 const size_t REQUEST_BUFFER_SIZE = 488;
 char requestBuffer[REQUEST_BUFFER_SIZE];
+
+Stats testStats;
 
 void setup()
 {
@@ -33,14 +36,25 @@ void setup()
   else
     Serial.print("CAN0: Initialization Failed.\n\r");
 
-
+  StatData tmp;
+  tmp.name = StatData::BATT_VOLTAGE;
+  tmp.doubleVal = 420.69;
+  //test_stats[0] = {true, {StatData::BATT_VOLTAGE, .doubleVal=69.420}};
+  testStats[0].present = true;
+  testStats[0].value = tmp;
+  for (int i = 1; i < StatData::_LAST; i++)
+  {
+    //test_stats[i] = {false, {i, .boolVal=false}};
+    testStats[i].present = false;
+  }
 }
 
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   printReceivedFrame();
-  // sendStats();
+  sendStats(testStats);
+  delay(5000);
   shutdownOnCommand();
 }
 
@@ -68,7 +82,7 @@ void sendMaxTempEveryFiveSeconds()
 
 void printReceivedFrame()
 {
-  // xbee.read();
+  xbee.read();
 }
 
 void shutdownOnCommand()
@@ -95,6 +109,14 @@ void printTemperature(byte temp)
   Serial.print("\n\r");
 }
 
+void setContentLengthHeader(char* dest, int len)
+{
+  char* contentLength = strstr(dest, "Content-Length: ") + 16;
+  char tmpBuffer[4]; 
+  sprintf(tmpBuffer, "%03u", len);
+  strncpy(contentLength, tmpBuffer, 3);
+}
+
 void sendStats(Stats stats)
 {
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
@@ -105,19 +127,15 @@ void sendStats(Stats stats)
     if (stats[i].present)
     {
       bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), stats[i].value); // append the key-value pair
-      strcat(requestBuffer, ",");
+      //strcat(requestBuffer, ",");
     }
-    strcat(requestBuffer, "}");
   }
+  
+  strcat(requestBuffer, "}");
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  xbee.sendTCP("216.58.192.212", 5000, 
-}
-
-void setContentLegnthHeader(char* dest, int len)
-{
-  char* contentLength = strstr(dest, "Content-Length: ") + 16;
-  sprintf(contentLength, "%03u", len);
+  Serial.println(requestBuffer);
+  xbee.sendTCP(IPAddress(216, 58, 192, 212), 5000, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
 int toKeyValuePair(char* dest, StatData data)
