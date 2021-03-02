@@ -120,8 +120,10 @@ void sendStatsEveryFiveSeconds(Stats stats)
 {
   if (millis() >= nextTimeWeSendFrame)
   {
+    mySerial.suppress();
     nextTimeWeSendFrame += DELAY;
     sendStats(stats);
+    mySerial.unsuppress();
   }
 }
 

@@ -18,10 +18,13 @@ class MonitoredSerial: public Stream
   int available();
   int peek();
   void flush();
+  void suppress();
+  void unsuppress();
   
   private:
   Stream& m_toMonitor;
   Stream& m_listener;
+  bool m_suppress;
 };
 
 #endif

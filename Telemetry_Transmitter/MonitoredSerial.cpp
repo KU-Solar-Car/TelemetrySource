@@ -3,7 +3,7 @@
 int MonitoredSerial::read(void)
 {
   int temp = m_toMonitor.read();
-  if (temp != -1)
+  if (temp != -1 && !m_suppress)
     m_listener.print(String(temp, HEX) + " ");
   return temp;
 }
@@ -11,7 +11,8 @@ int MonitoredSerial::read(void)
 size_t MonitoredSerial::write(uint8_t n)
 {
   m_toMonitor.write(n);
-  m_listener.print(String(n, HEX) + " ");
+  if (!m_suppress)
+    m_listener.print(String(n, HEX) + " ");
   return 1;
 }
 
@@ -28,4 +29,14 @@ int MonitoredSerial::available()
 void MonitoredSerial::flush()
 {
   return m_toMonitor.flush();
+}
+
+void MonitoredSerial::suppress()
+{
+  m_suppress = true;
+}
+
+void MonitoredSerial::unsuppress()
+{
+  m_suppress = false;
 }
