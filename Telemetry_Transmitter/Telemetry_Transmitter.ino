@@ -53,8 +53,7 @@ void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   printReceivedFrame();
-  sendStats(testStats);
-  delay(5000);
+  sendStatsEveryFiveSeconds(testStats);
   shutdownOnCommand();
 }
 
@@ -115,6 +114,15 @@ void setContentLengthHeader(char* dest, int len)
   char tmpBuffer[4]; 
   sprintf(tmpBuffer, "%03u", len);
   strncpy(contentLength, tmpBuffer, 3);
+}
+
+void sendStatsEveryFiveSeconds(Stats stats)
+{
+  if (millis() >= nextTimeWeSendFrame)
+  {
+    nextTimeWeSendFrame += DELAY;
+    sendStats(stats);
+  }
 }
 
 void sendStats(Stats stats)
