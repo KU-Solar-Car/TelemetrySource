@@ -3,6 +3,7 @@
 #include "MonitoredSerial.h"
 #include "Stats.h"
 #include "IPAddress.h"
+#include "Frames.h"
 
 const byte BYTE_MIN = -128;
 const unsigned long DELAY = 5000;
@@ -81,7 +82,17 @@ void sendMaxTempEveryFiveSeconds()
 
 void printReceivedFrame()
 {
-  xbee.read();
+  userFrame recvd = xbee.read();
+  if (!(recvd == NULL_USER_FRAME))
+  {
+    Serial.println("Got frame:");
+    Serial.println("Frame type: " + String(recvd.frameType, HEX));
+    Serial.print("Frame data: ");
+    Serial.write(recvd.frameData, recvd.frameDataLength);
+    Serial.println("");
+  }
+  // else
+    // Serial.println("Got here nothing :(");
 }
 
 void shutdownOnCommand()
@@ -120,10 +131,11 @@ void sendStatsEveryFiveSeconds(Stats stats)
 {
   if (millis() >= nextTimeWeSendFrame)
   {
-    mySerial.suppress();
+    // mySerial.suppress();
     nextTimeWeSendFrame += DELAY;
     sendStats(stats);
-    mySerial.unsuppress();
+    Serial.println("");
+    // mySerial.unsuppress();
   }
 }
 
@@ -144,7 +156,7 @@ void sendStats(Stats stats)
   strcat(requestBuffer, "}");
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  Serial.println(requestBuffer);
+  // Serial.println(requestBuffer);
   xbee.sendTCP(IPAddress(216, 58, 192, 212), 5000, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
