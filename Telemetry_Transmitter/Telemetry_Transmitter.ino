@@ -156,8 +156,8 @@ void sendStats(Stats stats)
   strcat(requestBuffer, "}");
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  // Serial.println(requestBuffer);
-  xbee.sendTCP(IPAddress(216, 58, 192, 212), 5000, 0, 0, requestBuffer, strlen(requestBuffer));
+  Serial.println(requestBuffer);
+  xbee.sendTCP(IPAddress(216, 58, 192, 212), 80, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
 int toKeyValuePair(char* dest, StatData data)
