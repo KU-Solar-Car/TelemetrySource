@@ -11,7 +11,7 @@
 #include "Frames.h"
 #include "IPAddress.h"
 
-
+const uint8_t TERMINATE_TCP_SOCKET = 0x02;
 
 class XBee
 {

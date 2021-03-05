@@ -163,8 +163,10 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
   buf[0] = 0; // frameID = 0
   uint32_t addr_array = address;
   memcpy(buf+1, &addr_array, 4);
-  memcpy(buf+5, &destPort, 2);
-  memcpy(buf+7, &sourcePort, 2);
+  buf[5] = (char) (destPort >> 8); // The arduino is little-endian but tht digi wants big-endian here
+  buf[6] = (char) (destPort);
+  buf[7] = (char) (sourcePort >> 8);
+  buf[8] = (char) (sourcePort);
   buf[9] = 0x04;
   buf[10] = options;
   memcpy(buf+11, &payload, payloadLength);
