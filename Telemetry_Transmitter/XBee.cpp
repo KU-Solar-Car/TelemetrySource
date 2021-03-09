@@ -169,7 +169,7 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
   buf[8] = (char) (sourcePort);
   buf[9] = 0x04;
   buf[10] = options;
-  memcpy(buf+11, &payload, payloadLength);
+  memcpy(buf+11, payload, payloadLength);
 
   sendFrame(0x20, buf, bufSize);
 
