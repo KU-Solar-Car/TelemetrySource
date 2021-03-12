@@ -20,6 +20,7 @@ class MonitoredSerial: public Stream
   void flush();
   void suppress();
   void unsuppress();
+  void printByte(uint8_t n);
   
   private:
   Stream& m_toMonitor;
