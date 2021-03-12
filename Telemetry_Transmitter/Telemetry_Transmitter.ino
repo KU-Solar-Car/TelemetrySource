@@ -141,6 +141,7 @@ void sendStatsEveryFiveSeconds(Stats stats)
 
 void sendStats(Stats stats)
 {
+  
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
   strcat(requestBuffer, "{");
   int bodyLength = 2;
@@ -157,7 +158,10 @@ void sendStats(Stats stats)
   setContentLengthHeader(requestBuffer, bodyLength);
 
   Serial.println(requestBuffer);
-  xbee.sendTCP(IPAddress(216, 58, 192, 212), 80, 0, 0, requestBuffer, strlen(requestBuffer));
+  xbee.sendTCP(IPAddress(216, 58, 192, 212), 443, 0, 0, requestBuffer, strlen(requestBuffer));
+
+  // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
+  // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
 int toKeyValuePair(char* dest, StatData data)
