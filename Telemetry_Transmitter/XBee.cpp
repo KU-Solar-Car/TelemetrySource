@@ -88,7 +88,7 @@ bool XBee::shutdownCommandMode()
   if (ok != "OK")
     return false;
   m_serial.write("ATSD 0\r");
-  m_serial.setTimeout(30000);
+  m_serial.setTimeout(120000);
   ok = "";
   ok = m_serial.readStringUntil('\r');
   m_serial.setTimeout(1000);
