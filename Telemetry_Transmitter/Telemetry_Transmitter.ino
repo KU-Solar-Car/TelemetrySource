@@ -99,7 +99,7 @@ void shutdownOnCommand()
 {
   if (Serial.read() == 's')
   {
-    Serial.println("Shutting down, please wait about 30 seconds...");
+    Serial.println("Shutting down, please wait up to 2 minutes...");
     if (Serial.read() != 'c')
       xbee.shutdown(120000);
     else
