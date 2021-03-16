@@ -175,3 +175,14 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
 
   delete[] buf;
 }
+
+bool XBee::isConnected()
+{
+  sendATCommand(0, "AI", nullptr, 0);
+  userFrame resp;
+  do
+  {
+    resp = read();
+  } while (!(resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0));
+  return (resp.frameData[4] == 0x00);
+}

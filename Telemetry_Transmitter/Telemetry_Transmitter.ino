@@ -50,17 +50,17 @@ void setup()
     //test_stats[i] = {false, {i, .boolVal=false}};
     testStats[k].present = false;
   }
-
+   
   /* =================================
    * Wait for modem to associate before starting 
    * =================================*/
   userFrame status;
-  Serial.println("Waiting for network to associate...");
-  do
-  {
-    status = xbee.read();
-  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
-  Serial.println("Network associated.");
+//  Serial.println("Waiting for network to associate...");
+//  do
+//  {
+//    status = xbee.read();
+//  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
+//  Serial.println("Network associated.");
   
   /* =================================
    * Initialize variables that track stuff
@@ -128,7 +128,11 @@ void sendStatsEveryFiveSeconds(Stats stats)
   {
     // mySerial.suppress();
     nextTimeWeSendFrame = myTime + DELAY;
-    sendStats(stats);
+
+    if (xbee.isConnected())
+      sendStats(stats);
+    else
+      Serial.println("Modem is not connected, skipping this time.");
     Serial.println("");
     // mySerial.unsuppress();
   }
