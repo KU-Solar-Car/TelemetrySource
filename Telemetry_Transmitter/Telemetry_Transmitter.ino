@@ -123,10 +123,11 @@ void setContentLengthHeader(char* dest, int len)
 
 void sendStatsEveryFiveSeconds(Stats stats)
 {
-  if (millis() >= nextTimeWeSendFrame)
+  unsigned long myTime = millis();
+  if (myTime >= nextTimeWeSendFrame)
   {
     // mySerial.suppress();
-    nextTimeWeSendFrame += DELAY;
+    nextTimeWeSendFrame = myTime + DELAY;
     sendStats(stats);
     Serial.println("");
     // mySerial.unsuppress();
