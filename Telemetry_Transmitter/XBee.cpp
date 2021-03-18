@@ -178,7 +178,7 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
 
 bool XBee::isConnected()
 {
-  sendATCommand(0, "AI", nullptr, 0);
+  sendATCommand(1, "AI", nullptr, 0);
   userFrame resp;
   do
   {

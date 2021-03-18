@@ -134,7 +134,7 @@ void sendStatsEveryFiveSeconds(Stats stats)
     else
       Serial.println("Modem is not connected, skipping this time.");
     Serial.println("");
-    // mySerial.unsuppress();
+    mySerial.unsuppress();
   }
 }
 
