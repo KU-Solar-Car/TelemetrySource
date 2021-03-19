@@ -184,7 +184,7 @@ bool XBee::isConnected(unsigned timeout)
   do
   {
     resp = read();
-    if (!(resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0))
+    if (resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0)
     {
       return (resp.frameData[4] == 0x00);
     }
