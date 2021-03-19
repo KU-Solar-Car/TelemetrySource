@@ -176,13 +176,19 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
   delete[] buf;
 }
 
-bool XBee::isConnected()
+bool XBee::isConnected(unsigned timeout)
 {
   sendATCommand(1, "AI", nullptr, 0);
   userFrame resp;
+  unsigned long myTime = millis();
   do
   {
     resp = read();
-  } while (!(resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0));
-  return (resp.frameData[4] == 0x00);
+    if (!(resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0))
+    {
+      return (resp.frameData[4] == 0x00);
+    }
+  } while (myTime+timeout < millis());
+  Serial.println("Connectivity check timed out");
+  return false;
 }

@@ -129,7 +129,7 @@ void sendStatsEveryFiveSeconds(Stats stats)
     // mySerial.suppress();
     nextTimeWeSendFrame = myTime + DELAY;
 
-    if (xbee.isConnected())
+    if (xbee.isConnected(5000))
       sendStats(stats);
     else
       Serial.println("Modem is not connected, skipping this time.");
