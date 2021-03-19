@@ -180,7 +180,7 @@ bool XBee::isConnected(unsigned timeout)
 {
   sendATCommand(1, "AI", nullptr, 0);
   userFrame resp;
-  unsigned long myTime = millis();
+  const unsigned long myTime = millis();
   do
   {
     resp = read();
@@ -188,7 +188,7 @@ bool XBee::isConnected(unsigned timeout)
     {
       return (resp.frameData[4] == 0x00);
     }
-  } while (myTime+timeout < millis());
+  } while (millis() < myTime+timeout);
   Serial.println("Connectivity check timed out");
   return false;
 }
