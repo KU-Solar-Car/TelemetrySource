@@ -44,7 +44,7 @@ void XBee::sendFrame(const byte& frameType, const char frameData[], size_t frame
   m_serial.write(len_lsb);
   m_serial.write(frameType);
   m_serial.write(frameData, frameDataLen);
-  m_serial.write(checksum);\
+  m_serial.write(checksum);
   Serial.println("");
 }
 

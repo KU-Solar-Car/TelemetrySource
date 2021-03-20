@@ -162,8 +162,7 @@ void sendStats(Stats stats)
       strcat(requestBuffer, ",");
     }
   }
-  
-  strcat(requestBuffer, "}");
+  requestBuffer[strlen(requestBuffer)-1] = '}';
   setContentLengthHeader(requestBuffer, bodyLength);
 
   Serial.println(requestBuffer);
