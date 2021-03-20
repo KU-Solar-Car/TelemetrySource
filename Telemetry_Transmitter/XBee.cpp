@@ -44,7 +44,8 @@ void XBee::sendFrame(const byte& frameType, const char frameData[], size_t frame
   m_serial.write(len_lsb);
   m_serial.write(frameType);
   m_serial.write(frameData, frameDataLen);
-  m_serial.write(checksum);
+  m_serial.write(checksum);\
+  Serial.println("");
 }
 
 void XBee::sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen)
@@ -100,14 +101,54 @@ bool XBee::shutdownCommandMode()
 }
 
 userFrame XBee::read()
-{ 
-  for (int recvd = m_serial.read(); recvd != -1 && (m_rxBuffer.bytes_recvd < m_rxBuffer.length()); recvd = m_serial.read())
+{
+  int recvd;
+  unsigned long lastRead = millis();
+  const unsigned timeout = 3000;
+  do
   {
-    if (m_rxBuffer.bytes_recvd == 1)
+    recvd = m_serial.read();
+    if (recvd == -1) 
+    {
+      // Serial.println("Start delimiter not found.");
+      return NULL_USER_FRAME; 
+    }
+  } while (recvd != 0x7E);
+
+  m_rxBuffer.bytes_recvd = 1;
+  Serial.println("Got start delimiter 0x7E");
+
+  while (true)
+  {
+    while (true)
+    {
+      recvd = m_serial.read();
+      if (recvd != -1)
+      {
+        lastRead = millis();
+        m_rxBuffer.bytes_recvd++;
+        if (m_rxBuffer.bytes_recvd == 3 || m_rxBuffer.bytes_recvd == 4 || m_rxBuffer.bytes_recvd == (m_rxBuffer.frameLength + 3))
+        {
+          char bytes_recvd_s[5];
+          sprintf(bytes_recvd_s, "%d", m_rxBuffer.bytes_recvd);
+          Serial.print("bytes_recvd=");
+          Serial.print(bytes_recvd_s);
+          Serial.print(" ");
+        }
+        break;
+      }
+      else if (millis() > lastRead + timeout)
+      {
+        Serial.println("Timed out in the middle of receiving a packet.");
+        return NULL_USER_FRAME;
+      }
+    }
+    
+    if (m_rxBuffer.bytes_recvd == 2)
     {
       m_rxBuffer.frameLength = recvd << 8;
     }
-    else if (m_rxBuffer.bytes_recvd == 2)
+    else if (m_rxBuffer.bytes_recvd == 3)
     {
       m_rxBuffer.frameLength += recvd;
       char lengthField[5];
@@ -115,7 +156,7 @@ userFrame XBee::read()
       Serial.print("Got length field: ");
       Serial.println(lengthField);
     }
-    else if (m_rxBuffer.bytes_recvd == 3)
+    else if (m_rxBuffer.bytes_recvd == 4)
     {
       m_rxBuffer.frameType = recvd;
       char frameType[2];
@@ -123,9 +164,9 @@ userFrame XBee::read()
       Serial.print("Got frame type: ");
       Serial.println(frameType);
     }
-    else if (m_rxBuffer.frameDataRecvd() < m_rxBuffer.frameDataLength())
+    else if ((m_rxBuffer.bytes_recvd - 4) <= m_rxBuffer.frameDataLength())
     {
-      m_rxBuffer.frameData[m_rxBuffer.frameDataRecvd()] = (char) recvd; // use a char here because that is probably what append is defined for
+      m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 5] = (char) recvd;
     }
     else
     {
@@ -133,54 +174,38 @@ userFrame XBee::read()
       char checksum[2];
       char lastData[2];
       sprintf(checksum, "%02X", recvd);
-      sprintf(lastData, "%02X", m_rxBuffer.frameData[m_rxBuffer.frameDataLength()]);
+      sprintf(lastData, "%02X", m_rxBuffer.frameData[m_rxBuffer.frameDataLength() - 1]);
       Serial.print("End frame. Last data: ");
       Serial.print(lastData);
       Serial.print("; Checksum: ");
       Serial.println(checksum);
+
+      uint8_t verify = m_rxBuffer.frameType;
+      for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
+      {
+        verify += m_rxBuffer.frameData[i];
+      }
+      verify += m_rxBuffer.checksum;
+
+      userFrame ret;
+      if (verify == 0xFF)
+      {
+        Serial.println("Frame is verified (0xFF).");
+        ret = {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
+      }
+      else
+      { // poo poo frame, return nothing to our poor user :(
+        char verify_s[2];
+        sprintf(verify_s, "%02X", verify);
+        Serial.print("Failed to verify frame. verify=");
+        Serial.println(verify_s);
+        ret = NULL_USER_FRAME;
+      }
+      
       Serial.println("END RX");
+      m_rxBuffer.bytes_recvd = 0;
+      return ret;
     }
-    char bytesRecvd[5];
-    if ((m_rxBuffer.bytes_recvd == 0 && recvd == 0x7E))
-    {
-      Serial.println("BEGIN RX:");
-      Serial.println("Got start delimiter 0x7E");
-      m_rxBuffer.bytes_recvd++;
-    }
-    else if (m_rxBuffer.bytes_recvd > 0)
-    {
-      m_rxBuffer.bytes_recvd++;
-    }
-    sprintf(bytesRecvd, "%d", m_rxBuffer.bytes_recvd);
-  }
-
-  if (m_rxBuffer.bytes_recvd == m_rxBuffer.length())
-  {
-    uint8_t verify = m_rxBuffer.frameType;
-    for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
-    {
-      verify += m_rxBuffer.frameData[i];
-    }
-    verify += m_rxBuffer.checksum;
-
-    userFrame ret;
-    if (verify == 0xFF)
-    {
-      Serial.println("Frame is verified");
-      ret = {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
-    }
-    else
-    { // poo poo frame, return nothing to our poor user :(
-      Serial.println("Failed to verify frame. verify=" + String(verify, HEX) + " bytes_recvd=" + String(m_rxBuffer.bytes_recvd));
-      ret = NULL_USER_FRAME;
-    }
-    
-    m_rxBuffer.bytes_recvd = 0; // reset the bytes received so that we will look for a frame next time
-    return ret;
-  }
-  else
-  {
-    return NULL_USER_FRAME;
   }
 }
 
