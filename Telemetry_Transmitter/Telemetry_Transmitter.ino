@@ -24,6 +24,9 @@ void setup()
   Serial.begin(9600);
   Serial1.begin(9600);
 
+  // Suppress the serial
+  // mySerial.suppress();
+
   /* --------------------------------
    * Set the XBee in API Mode
    * =================================*/
@@ -73,7 +76,7 @@ void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   
-  printReceivedFrame();
+  // printReceivedFrame();
   sendStatsEveryFiveSeconds(testStats);
   shutdownOnCommand();
 }
@@ -126,15 +129,22 @@ void sendStatsEveryFiveSeconds(Stats stats)
   unsigned long myTime = millis();
   if (myTime >= nextTimeWeSendFrame)
   {
-    // mySerial.suppress();
     nextTimeWeSendFrame = myTime + DELAY;
 
     if (xbee.isConnected(5000))
+    {
+      userFrame resp;
       sendStats(stats);
+      const unsigned long myTime = millis();
+      const unsigned timeout = 60000;
+      do
+      {
+        resp = xbee.read();
+      } while (millis() < myTime+timeout && resp.frameType != 0xB0);
+    }
     else
       Serial.println("Modem is not connected, skipping this time.");
     Serial.println("");
-    mySerial.unsuppress();
   }
 }
 
