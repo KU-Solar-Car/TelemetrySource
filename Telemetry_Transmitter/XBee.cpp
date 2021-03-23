@@ -104,7 +104,7 @@ userFrame XBee::read()
 {
   int recvd;
   unsigned long lastRead = millis();
-  const unsigned timeout = 3000;
+  const unsigned timeout = 7000;
   do
   {
     recvd = m_serial.read();
@@ -139,6 +139,10 @@ userFrame XBee::read()
       }
       else if (millis() > lastRead + timeout)
       {
+        char recvd_debug[2];
+        sprintf(recvd_debug, "%d", recvd);
+        Serial.print(" recvd=");
+        Serial.print(recvd_debug);
         Serial.println("Timed out in the middle of receiving a packet.");
         return NULL_USER_FRAME;
       }
