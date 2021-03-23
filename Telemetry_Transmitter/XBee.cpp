@@ -120,7 +120,7 @@ userFrame XBee::read()
 
   while (true)
   {
-    while (true)
+    while (m_rxBuffer.bytes_recvd < 3 || m_rxBuffer.bytes_recvd < m_rxBuffer.frameLength + 4)
     {
       recvd = m_serial.read();
       if (recvd != -1)
