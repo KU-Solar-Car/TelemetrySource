@@ -103,8 +103,8 @@ bool XBee::shutdownCommandMode()
 userFrame XBee::read()
 {
   int recvd;
-  unsigned long lastRead = millis();
-  const unsigned timeout = 7000;
+  const unsigned timeout = 3000;
+  m_rxBuffer.bytes_recvd = 0;
   do
   {
     recvd = m_serial.read();
@@ -114,103 +114,46 @@ userFrame XBee::read()
       return NULL_USER_FRAME; 
     }
   } while (recvd != 0x7E);
-
-  m_rxBuffer.bytes_recvd = 1;
   Serial.println("Got start delimiter 0x7E");
-
-  while (true)
+  unsigned long lastRead = millis();
+  
+  while (m_rxBuffer.bytes_recvd < m_rxBuffer.length())
   {
-    while (m_rxBuffer.bytes_recvd < 3 || m_rxBuffer.bytes_recvd < m_rxBuffer.frameLength + 4)
+    if (m_serial.available())
     {
-      recvd = m_serial.read();
-      if (recvd != -1)
-      {
-        lastRead = millis();
-        m_rxBuffer.bytes_recvd++;
-        if (m_rxBuffer.bytes_recvd == 3 || m_rxBuffer.bytes_recvd == 4 || m_rxBuffer.bytes_recvd == (m_rxBuffer.frameLength + 3))
-        {
-          char bytes_recvd_s[5];
-          sprintf(bytes_recvd_s, "%d", m_rxBuffer.bytes_recvd);
-          Serial.print("bytes_recvd=");
-          Serial.print(bytes_recvd_s);
-          Serial.print(" ");
-        }
-        break;
-      }
-      else if (millis() > lastRead + timeout)
-      {
-        char recvd_debug[2];
-        sprintf(recvd_debug, "%d", recvd);
-        Serial.print(" recvd=");
-        Serial.print(recvd_debug);
-        Serial.println("Timed out in the middle of receiving a packet.");
-        return NULL_USER_FRAME;
-      }
+      m_rxBuffer.buf[m_rxBuffer.bytes_recvd] = m_serial.read();
+      m_rxBuffer.bytes_recvd++;
+      lastRead = millis();
     }
-    
-    if (m_rxBuffer.bytes_recvd == 2)
+    else if (millis() > lastRead + timeout)
     {
-      m_rxBuffer.frameLength = recvd << 8;
-    }
-    else if (m_rxBuffer.bytes_recvd == 3)
-    {
-      m_rxBuffer.frameLength += recvd;
-      char lengthField[5];
-      sprintf(lengthField, "%d", m_rxBuffer.frameLength);
-      Serial.print("Got length field: ");
-      Serial.println(lengthField);
-    }
-    else if (m_rxBuffer.bytes_recvd == 4)
-    {
-      m_rxBuffer.frameType = recvd;
-      char frameType[2];
-      sprintf(frameType, "%02X", recvd);
-      Serial.print("Got frame type: ");
-      Serial.println(frameType);
-    }
-    else if ((m_rxBuffer.bytes_recvd - 4) <= m_rxBuffer.frameDataLength())
-    {
-      m_rxBuffer.frameData[m_rxBuffer.bytes_recvd - 5] = (char) recvd;
-    }
-    else
-    {
-      m_rxBuffer.checksum = recvd;
-      char checksum[2];
-      char lastData[2];
-      sprintf(checksum, "%02X", recvd);
-      sprintf(lastData, "%02X", m_rxBuffer.frameData[m_rxBuffer.frameDataLength() - 1]);
-      Serial.print("End frame. Last data: ");
-      Serial.print(lastData);
-      Serial.print("; Checksum: ");
-      Serial.println(checksum);
-
-      uint8_t verify = m_rxBuffer.frameType;
-      for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
-      {
-        verify += m_rxBuffer.frameData[i];
-      }
-      verify += m_rxBuffer.checksum;
-
-      userFrame ret;
-      if (verify == 0xFF)
-      {
-        Serial.println("Frame is verified (0xFF).");
-        ret = {m_rxBuffer.frameType, m_rxBuffer.frameData, m_rxBuffer.frameDataLength()};
-      }
-      else
-      { // poo poo frame, return nothing to our poor user :(
-        char verify_s[2];
-        sprintf(verify_s, "%02X", verify);
-        Serial.print("Failed to verify frame. verify=");
-        Serial.println(verify_s);
-        ret = NULL_USER_FRAME;
-      }
-      
-      Serial.println("END RX");
-      m_rxBuffer.bytes_recvd = 0;
-      return ret;
+      Serial.println("Timed out in the middle of receiving a frame.");
+      m_rxBuffer.clear();
+      return NULL_USER_FRAME;
     }
   }
+
+  Serial.println("BEGIN RX");
+  
+  char len_str[21];
+  sprintf(len_str, "Length: %02X %02X (%d)", m_rxBuffer.buf[0], m_rxBuffer.buf[1], m_rxBuffer.frameLength());
+  Serial.println(len_str);
+
+  char type_str[15];
+  sprintf(type_str, "Frame Type: %02X", m_rxBuffer.buf[2]);
+  Serial.println(type_str);
+  
+  Serial.print("Frame Data: ");
+  Serial.print(m_rxBuffer.buf+3, m_rxBuffer.frameDataLength());
+  Serial.println();
+
+  char sum_str[13];
+  sprintf(sum_str, "Checksum: %02X", m_rxBuffer.buf[m_rxBuffer.length()-1]);
+  Serial.println(sum_str);
+
+  Serial.println("END RX");
+
+  return {m_rxBuffer.frameType(), m_rxBuffer.buf+3, m_rxBuffer.frameDataLength()};
 }
 
 void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t options, const char payload[], size_t payloadLength)

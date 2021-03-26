@@ -136,7 +136,7 @@ void sendStatsEveryFiveSeconds(Stats stats)
       userFrame resp;
       sendStats(stats);
       const unsigned long myTime = millis();
-      const unsigned timeout = 60000;
+      const unsigned timeout = 10000;
       do
       {
         resp = xbee.read();

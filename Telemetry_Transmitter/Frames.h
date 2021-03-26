@@ -5,24 +5,53 @@
 
 struct frame
 {
-  const uint16_t MAX_BUFFER_SIZE = 1550;
+  // const uint16_t MAX_BUFFER_SIZE = 1550;
+  static const uint16_t MAX_BUFFER_SIZE{1800};
+  char buf[MAX_BUFFER_SIZE]; //0x7E will NOT be in the buffer.
+  uint16_t bytes_recvd;
+  
   frame();
   ~frame();
   frame& operator=(const frame& other);
-  uint16_t frameDataLength();
 
-  uint16_t bytes_recvd;
-  uint16_t frameLength; // the length octets we receive from the packet
-  uint8_t frameType;
-  char* frameData;
-  uint8_t checksum;
+  uint16_t length() const;
+  uint16_t frameLength() const; // the length field of the packet, plus the length of the length field itself, plus 1 byte for checksum
+  uint8_t frameType() const;
+  char* const frameData() const;
+  uint16_t frameDataLength() const;
+  uint8_t checksum() const;
+  void clear();
 };
 
-inline uint16_t frame::frameDataLength()
+inline uint16_t frame::length() const
 {
-  return frameLength - 1;
+  return frameLength() + 3;
 }
 
+inline uint16_t frame::frameLength() const
+{
+  return (bytes_recvd >= 2) ? (buf[1] | (buf[0] << 8)) : 0;
+}
+
+inline uint16_t frame::frameDataLength() const
+{
+  return frameLength() - 1;
+}
+
+inline uint8_t frame::frameType() const
+{
+  return buf[2];
+}
+
+inline char* const frame::frameData() const
+{
+  return buf+3; // +2 to get past length, +1 to get past frameType
+}
+
+inline uint8_t frame::checksum() const
+{
+  return buf[frameLength()];
+}
 
 struct userFrame
 {
