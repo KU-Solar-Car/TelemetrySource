@@ -10,8 +10,8 @@ byte maxTemp;
 
 const unsigned long DELAY = 5000;
 unsigned long nextTimeWeSendFrame;
-MonitoredSerial mySerial(Serial1, Serial);
-XBee xbee(mySerial);
+// MonitoredSerial mySerial(Serial1, Serial);
+XBee xbee(Serial1);
 
 const size_t REQUEST_BUFFER_SIZE = 488;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -47,7 +47,7 @@ void setup()
    * Initialize StatData
    * =================================*/
   testStats[StatKey::BATT_VOLTAGE].present = true;
-  testStats[StatKey::BATT_VOLTAGE].doubleVal = 420.69;
+  testStats[StatKey::BATT_VOLTAGE].doubleVal = 69.420;
   for (int k = 1; k < StatKey::_LAST; k++)
   {
     //test_stats[i] = {false, {i, .boolVal=false}};

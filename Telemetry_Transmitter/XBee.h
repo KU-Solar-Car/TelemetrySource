@@ -16,11 +16,11 @@ const uint8_t TERMINATE_TCP_SOCKET = 0x02;
 class XBee
 {
   private:
-  MonitoredSerial& m_serial;
+  Stream& m_serial;
   frame m_rxBuffer;
 
   public:
-  XBee(MonitoredSerial& serial) : m_serial(serial){}
+  XBee(Stream& serial) : m_serial(serial){}
   bool configure();
   userFrame read(); // Can read one full packet at a time.
   bool shutdownCommandMode();

@@ -144,7 +144,7 @@ userFrame XBee::read()
   Serial.println(type_str);
   
   Serial.print("Frame Data: ");
-  Serial.print(m_rxBuffer.buf+3, m_rxBuffer.frameDataLength());
+  Serial.write(m_rxBuffer.frameData(), m_rxBuffer.frameDataLength());
   Serial.println();
 
   char sum_str[13];
