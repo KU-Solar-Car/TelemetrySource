@@ -12,6 +12,11 @@ void frame::clear()
   memset(buf,0,MAX_BUFFER_SIZE);
 }
 
+frame::~frame()
+{
+  clear();
+}
+
 bool userFrame::operator==(const userFrame& other)
 {
   return (

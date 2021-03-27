@@ -10,14 +10,14 @@ struct frame
   char buf[MAX_BUFFER_SIZE]; //0x7E will NOT be in the buffer.
   uint16_t bytes_recvd;
   
-  frame();
+  // frame();
   ~frame();
   frame& operator=(const frame& other);
 
   uint16_t length() const;
   uint16_t frameLength() const; // the length field of the packet, plus the length of the length field itself, plus 1 byte for checksum
   uint8_t frameType() const;
-  char* const frameData() const;
+  char* frameData();
   uint16_t frameDataLength() const;
   uint8_t checksum() const;
   void clear();
@@ -35,7 +35,7 @@ inline uint16_t frame::frameLength() const
 
 inline uint16_t frame::frameDataLength() const
 {
-  return frameLength() - 1;
+  return frameLength() - 2;
 }
 
 inline uint8_t frame::frameType() const
@@ -43,7 +43,7 @@ inline uint8_t frame::frameType() const
   return buf[2];
 }
 
-inline char* const frame::frameData() const
+inline char* frame::frameData()
 {
   return buf+3; // +2 to get past length, +1 to get past frameType
 }
