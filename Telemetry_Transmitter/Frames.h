@@ -14,8 +14,8 @@ struct frame
   ~frame();
   frame& operator=(const frame& other);
 
-  uint16_t length() const;
-  uint16_t frameLength() const; // the length field of the packet, plus the length of the length field itself, plus 1 byte for checksum
+  uint16_t length() const; // the length field of the packet, plus the length of the length field itself, plus 1 byte for checksum
+  uint16_t frameLength() const;
   uint8_t frameType() const;
   char* frameData();
   uint16_t frameDataLength() const;
