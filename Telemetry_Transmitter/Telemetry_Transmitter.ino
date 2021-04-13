@@ -46,9 +46,33 @@ void setup()
   /* =================================
    * Initialize StatData
    * =================================*/
-  testStats[StatKey::BATT_VOLTAGE].present = true;
-  testStats[StatKey::BATT_VOLTAGE].doubleVal = 69.420;
-  for (int k = 1; k < StatKey::_LAST; k++)
+//  testStats[StatKey::BATT_VOLTAGE].present = true;
+//  testStats[StatKey::BATT_VOLTAGE].doubleVal = 69.420;
+//  testStats[StatKey::BATT_CURRENT].present = true;
+//  testStats[StatKey::BATT_CURRENT].doubleVal = 342.3;
+//  testStats[StatKey::BATT_TEMP].present = true;
+//  testStats[StatKey::BATT_TEMP].doubleVal = -123.456;
+//  testStats[StatKey::BMS_FAULT].present = true;
+
+  for(int i = 0; i < 6; i++)
+  {
+    testStats[i].present = true;
+    
+    if(i == StatKey::BMS_FAULT)
+    {
+      testStats[i].boolVal = static_cast<bool>(random(0, 2)); // Excludes the max :(
+    }
+    else if(i == StatKey::GPS_TIME)
+    {
+      testStats[i].uIntVal = static_cast<unsigned int>(random(5001));
+    }
+    else
+    {
+      testStats[i].doubleVal = random(0, 8000) / static_cast<double>(random(1, 100));
+    }
+  }
+
+  for (int k = 6; k < StatKey::_LAST; k++)
   {
     //test_stats[i] = {false, {i, .boolVal=false}};
     testStats[k].present = false;

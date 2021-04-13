@@ -18,6 +18,7 @@ enum StatKey: int
   SOLAR_CURRENT,
   MOTOR_SPD,
   _LAST
+  // TODO: Add motor temperature
 };
 
 struct StatData
