@@ -10,8 +10,8 @@ byte maxTemp;
 
 const unsigned long DELAY = 5000;
 unsigned long nextTimeWeSendFrame;
-// MonitoredSerial mySerial(Serial1, Serial);
-XBee xbee(Serial1);
+MonitoredSerial mySerial(Serial1, Serial);
+XBee xbee(mySerial);
 
 const size_t REQUEST_BUFFER_SIZE = 488;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -46,15 +46,8 @@ void setup()
   /* =================================
    * Initialize StatData
    * =================================*/
-//  testStats[StatKey::BATT_VOLTAGE].present = true;
-//  testStats[StatKey::BATT_VOLTAGE].doubleVal = 69.420;
-//  testStats[StatKey::BATT_CURRENT].present = true;
-//  testStats[StatKey::BATT_CURRENT].doubleVal = 342.3;
-//  testStats[StatKey::BATT_TEMP].present = true;
-//  testStats[StatKey::BATT_TEMP].doubleVal = -123.456;
-//  testStats[StatKey::BMS_FAULT].present = true;
 
-  for(int i = 0; i < 6; i++)
+  for(int i = 0; i < StatKey::_LAST; i++)
   {
     testStats[i].present = true;
     
@@ -70,12 +63,6 @@ void setup()
     {
       testStats[i].doubleVal = random(0, 8000) / static_cast<double>(random(1, 100));
     }
-  }
-
-  for (int k = 6; k < StatKey::_LAST; k++)
-  {
-    //test_stats[i] = {false, {i, .boolVal=false}};
-    testStats[k].present = false;
   }
    
   /* =================================
