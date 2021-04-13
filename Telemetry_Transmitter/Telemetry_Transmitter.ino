@@ -135,7 +135,7 @@ void setContentLengthHeader(char* dest, int len)
   strncpy(contentLength, tmpBuffer, 3);
 }
 
-void sendStatsEveryFiveSeconds(Stats stats)
+void sendStatsEveryFiveSeconds(Stats& stats)
 {
   unsigned long myTime = millis();
   if (myTime >= nextTimeWeSendFrame)
@@ -159,7 +159,7 @@ void sendStatsEveryFiveSeconds(Stats stats)
   }
 }
 
-void sendStats(Stats stats)
+void sendStats(Stats& stats)
 {
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
@@ -183,7 +183,7 @@ void sendStats(Stats stats)
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
-int toKeyValuePair(char* dest, int key, StatData data)
+int toKeyValuePair(char* dest, int key, StatData& data)
 {
   switch(key)
   {
