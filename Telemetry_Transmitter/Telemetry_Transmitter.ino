@@ -189,8 +189,8 @@ void sendStats(Stats stats)
   requestBuffer[strlen(requestBuffer)-1] = '}';
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  Serial.println(requestBuffer);
   xbee.sendTCP(IPAddress(216, 58, 192, 212), 443, 0, 0, requestBuffer, strlen(requestBuffer));
+  Serial.println(requestBuffer);
 
   // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
