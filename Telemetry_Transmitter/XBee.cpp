@@ -105,6 +105,7 @@ userFrame XBee::read()
   int recvd;
   const unsigned timeout = 3000;
   m_rxBuffer.bytes_recvd = 0;
+  // Serial.println("Bytes in buffer: " + String(m_serial.available()));
   do
   {
     recvd = m_serial.read();
@@ -121,6 +122,7 @@ userFrame XBee::read()
   {
     if (m_serial.available())
     {
+      Serial.println("Bytes available: " + String(m_serial.available()));
       m_rxBuffer.buf[m_rxBuffer.bytes_recvd] = m_serial.read();
       m_rxBuffer.bytes_recvd++;
       lastRead = millis();

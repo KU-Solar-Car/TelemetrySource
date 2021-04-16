@@ -10,18 +10,37 @@ byte maxTemp;
 
 const unsigned long DELAY = 5000;
 unsigned long nextTimeWeSendFrame;
-MonitoredSerial mySerial(Serial1, Serial);
-XBee xbee(mySerial);
+// MonitoredSerial mySerial(Serial1, Serial);
+XBee xbee(Serial1);
 
 const size_t REQUEST_BUFFER_SIZE = 488;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
 Stats testStats;
 
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+ 
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
+}
+
 void setup()
 {
   // Set the serial interface baud rate
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial1.begin(9600);
 
   // Suppress the serial
@@ -47,7 +66,7 @@ void setup()
    * Initialize StatData
    * =================================*/
 
-  for(int i = 0; i < StatKey::_LAST; i++)
+  for(int i = 0; i < StatKey::_LAST-2; i++)
   {
     testStats[i].present = true;
     
@@ -87,7 +106,6 @@ void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   
-  // printReceivedFrame();
   sendStatsEveryFiveSeconds(testStats);
   shutdownOnCommand();
 }
@@ -141,7 +159,7 @@ void sendStatsEveryFiveSeconds(Stats& stats)
   if (myTime >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame = myTime + DELAY;
-
+    Serial.println("Free memory: " + String(freeMemory()) + "\0");
     if (xbee.isConnected(5000))
     {
       userFrame resp;
@@ -203,7 +221,6 @@ int toKeyValuePair(char* dest, int key, StatData& data)
     case StatKey::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.doubleVal); break;
   }
 }
-
 
 /* =================================
  * Temporarily not being used
