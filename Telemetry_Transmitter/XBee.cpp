@@ -104,7 +104,7 @@ userFrame XBee::read()
 {
   int recvd;
   const unsigned timeout = 3000;
-  m_rxBuffer.bytes_recvd = 0;
+  m_rxBuffer.clear();
   // Serial.println("Bytes in buffer: " + String(m_serial.available()));
   do
   {
@@ -120,9 +120,13 @@ userFrame XBee::read()
   
   while (m_rxBuffer.bytes_recvd < m_rxBuffer.length())
   {
-    if (m_serial.available())
+    int bytes_available = m_serial.available();
+    if (bytes_available > 0)
     {
-      Serial.println("Bytes available: " + String(m_serial.available()));
+      // Serial.println("Bytes available: " + String(bytes_available));
+      char ptr[30];
+      // sprintf(ptr, "Writing to address %p", m_rxBuffer.buf+m_rxBuffer.bytes_recvd);
+      // Serial.println(ptr);
       m_rxBuffer.buf[m_rxBuffer.bytes_recvd] = m_serial.read();
       m_rxBuffer.bytes_recvd++;
       lastRead = millis();
@@ -134,7 +138,7 @@ userFrame XBee::read()
       return NULL_USER_FRAME;
     }
   }
-
+  Serial.println("Available for write: " + String(Serial.availableForWrite()));
   Serial.println("BEGIN RX");
   
   char len_str[21];

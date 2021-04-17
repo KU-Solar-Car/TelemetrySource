@@ -9,6 +9,7 @@ frame& frame::operator=(const frame& other)
 
 void frame::clear()
 {
+  bytes_recvd = 0;
   memset(buf,0,MAX_BUFFER_SIZE);
 }
 

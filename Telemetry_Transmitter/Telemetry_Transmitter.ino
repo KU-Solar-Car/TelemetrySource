@@ -4,6 +4,8 @@
 #include "Stats.h"
 #include "IPAddress.h"
 #include "Frames.h"
+#include <MemoryFree.h>
+#include <pgmStrToRAM.h>
 
 const byte BYTE_MIN = -128;
 byte maxTemp;
@@ -16,26 +18,8 @@ XBee xbee(Serial1);
 const size_t REQUEST_BUFFER_SIZE = 488;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-Stats testStats;
+TelemetryData testStats[TelemetryData::Key::_LAST];
 
-
-#ifdef __arm__
-// should use uinstd.h to define sbrk but Due causes a conflict
-extern "C" char* sbrk(int incr);
-#else  // __ARM__
-extern char *__brkval;
-#endif  // __arm__
- 
-int freeMemory() {
-  char top;
-#ifdef __arm__
-  return &top - reinterpret_cast<char*>(sbrk(0));
-#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
-  return &top - __brkval;
-#else  // __arm__
-  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
-#endif  // __arm__
-}
 
 void setup()
 {
@@ -66,21 +50,20 @@ void setup()
    * Initialize StatData
    * =================================*/
 
-  for(int i = 0; i < StatKey::_LAST-2; i++)
+  for(int i = 0; i < TelemetryData::Key::_LAST-1; i++)
   {
-    testStats[i].present = true;
     
-    if(i == StatKey::BMS_FAULT)
+    if(i == TelemetryData::Key::BMS_FAULT)
     {
-      testStats[i].boolVal = static_cast<bool>(random(0, 2)); // Excludes the max :(
+      testStats[i].setBool(static_cast<bool>(random(0, 2))); // Excludes the max :(
     }
-    else if(i == StatKey::GPS_TIME)
+    else if(i == TelemetryData::Key::GPS_TIME)
     {
-      testStats[i].uIntVal = static_cast<unsigned int>(random(5001));
+      testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
     }
     else
     {
-      testStats[i].doubleVal = random(0, 8000) / static_cast<double>(random(1, 100));
+      testStats[i].setDouble(random(0, 8000) / static_cast<double>(random(1, 100)));
     }
   }
    
@@ -153,7 +136,7 @@ void setContentLengthHeader(char* dest, int len)
   strncpy(contentLength, tmpBuffer, 3);
 }
 
-void sendStatsEveryFiveSeconds(Stats& stats)
+void sendStatsEveryFiveSeconds(TelemetryData stats[])
 {
   unsigned long myTime = millis();
   if (myTime >= nextTimeWeSendFrame)
@@ -170,6 +153,8 @@ void sendStatsEveryFiveSeconds(Stats& stats)
       {
         resp = xbee.read();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
+      if (resp.frameType != 0xB0)
+        Serial.println("Request timed out.");
     }
     else
       Serial.println("Modem is not connected, skipping this time.");
@@ -177,13 +162,13 @@ void sendStatsEveryFiveSeconds(Stats& stats)
   }
 }
 
-void sendStats(Stats& stats)
+void sendStats(TelemetryData stats[])
 {
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
   strcat(requestBuffer, "{");
   int bodyLength = 2;
-  for (int k = 0; k < StatKey::_LAST; k++)
+  for (int k = 0; k < TelemetryData::Key::_LAST; k++)
   {
     if (stats[k].present)
     {
@@ -201,24 +186,24 @@ void sendStats(Stats& stats)
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
-int toKeyValuePair(char* dest, int key, StatData& data)
+int toKeyValuePair(char* dest, int key, TelemetryData data)
 {
   switch(key)
   {
-    case StatKey::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.doubleVal); break;
-    case StatKey::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.doubleVal); break;
-    case StatKey::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.doubleVal); break;
-    case StatKey::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.boolVal); break;
-    case StatKey::GPS_TIME: return sprintf(dest, "\"gps_time\":%6f", data.uIntVal); break;
-    case StatKey::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.doubleVal); break;
-    case StatKey::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.doubleVal); break;
-    case StatKey::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.doubleVal); break;
-    case StatKey::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.doubleVal); break;
-    case StatKey::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.doubleVal); break;
-    case StatKey::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.doubleVal); break;
-    case StatKey::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.doubleVal); break;
-    case StatKey::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.doubleVal); break;
-    case StatKey::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.doubleVal); break;
+    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool()); break;
+    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt()); break;
+    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
   }
 }
 
