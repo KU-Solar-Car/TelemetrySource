@@ -61,10 +61,6 @@ void setup()
     {
       testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
     }
-    else if (i == TelemetryData::Key::SPEED_OF_MOTOR)
-    {
-      testStats[i].setDouble(40);
-    }
     else
     {
       testStats[i].setDouble(random(0, 8000) / static_cast<double>(random(1, 100)));
@@ -207,7 +203,7 @@ int toKeyValuePair(char* dest, int key, TelemetryData data)
     case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble()); break;
     case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble()); break;
     case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::SPEED_OF_MOTOR: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
   }
 }
 
