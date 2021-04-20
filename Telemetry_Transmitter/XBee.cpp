@@ -162,7 +162,7 @@ userFrame XBee::read()
   return {m_rxBuffer.frameType(), m_rxBuffer.buf+3, m_rxBuffer.frameDataLength()};
 }
 
-void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t options, const char payload[], size_t payloadLength)
+void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t protocol, uint8_t options, const char payload[], size_t payloadLength)
 {
   size_t bufSize = 11 + payloadLength;
   char* buf = new char[bufSize];
@@ -173,7 +173,7 @@ void XBee::sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, ui
   buf[6] = (char) (destPort);
   buf[7] = (char) (sourcePort >> 8);
   buf[8] = (char) (sourcePort);
-  buf[9] = 0x04;
+  buf[9] = protocol;
   buf[10] = options;
   memcpy(buf+11, payload, payloadLength);
 

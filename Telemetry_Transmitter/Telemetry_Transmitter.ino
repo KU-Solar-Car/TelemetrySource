@@ -167,19 +167,19 @@ void sendStats(TelemetryData stats[])
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
   strcat(requestBuffer, "{");
-  int bodyLength = 2;
+  int bodyLength = 1; // the open bracket
   for (int k = 0; k < TelemetryData::Key::_LAST; k++)
   {
     if (stats[k].present)
     {
-      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), k, stats[k]); // append the key-value pair
+      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), k, stats[k]) + 1; // append the key-value pair, plus the trailing comma
       strcat(requestBuffer, ",");
     }
   }
   requestBuffer[strlen(requestBuffer)-1] = '}';
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  xbee.sendTCP(IPAddress(216, 58, 192, 212), 443, 0, 0, requestBuffer, strlen(requestBuffer));
+  xbee.sendTCP(IPAddress(216, 58, 192, 212), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   Serial.println(requestBuffer);
 
   // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");

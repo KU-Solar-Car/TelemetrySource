@@ -12,6 +12,10 @@
 #include "IPAddress.h"
 
 const uint8_t TERMINATE_TCP_SOCKET = 0x02;
+const uint8_t PROTOCOL_TLS = 0x04;
+const uint8_t PROTOCOL_TCP = 0x01;
+const uint16_t PORT_HTTPS = 443;
+const uint16_t PORT_HTTP = 80;
 
 class XBee
 {
@@ -27,7 +31,7 @@ class XBee
   void shutdown(unsigned int timeout);
   void sendFrame(const byte& frameType, const char frameData[], size_t frameDataLen);
   void sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen);
-  void sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t options, const char payload[], size_t payloadLength);
+  void sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t protocol, uint8_t options, const char payload[], size_t payloadLength);
   bool isConnected(unsigned);
 };
 
