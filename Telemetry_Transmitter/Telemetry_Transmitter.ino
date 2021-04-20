@@ -15,7 +15,7 @@ unsigned long nextTimeWeSendFrame;
 // MonitoredSerial mySerial(Serial1, Serial);
 XBee xbee(Serial1);
 
-const size_t REQUEST_BUFFER_SIZE = 488;
+const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
 TelemetryData testStats[TelemetryData::Key::_LAST];
@@ -50,7 +50,7 @@ void setup()
    * Initialize StatData
    * =================================*/
 
-  for(int i = 0; i < TelemetryData::Key::_LAST-1; i++)
+  for(int i = 0; i < TelemetryData::Key::_LAST; i++)
   {
     
     if(i == TelemetryData::Key::BMS_FAULT)
@@ -60,6 +60,10 @@ void setup()
     else if(i == TelemetryData::Key::GPS_TIME)
     {
       testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
+    }
+    else if (i == TelemetryData::Key::SPEED_OF_MOTOR)
+    {
+      testStats[i].setDouble(40);
     }
     else
     {
@@ -203,7 +207,7 @@ int toKeyValuePair(char* dest, int key, TelemetryData data)
     case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble()); break;
     case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble()); break;
     case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::SPEED_OF_MOTOR: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
   }
 }
 
