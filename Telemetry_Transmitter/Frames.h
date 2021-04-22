@@ -35,7 +35,7 @@ inline uint16_t frame::frameLength() const
 
 inline uint16_t frame::frameDataLength() const
 {
-  return frameLength() - 2;
+  return frameLength() - 1;
 }
 
 inline uint8_t frame::frameType() const
