@@ -45,27 +45,6 @@ void setup()
     Serial.print("CAN0: Initialized Successfully.\n\r");
   else
     Serial.print("CAN0: Initialization Failed.\n\r");
-  
-  /* =================================
-   * Initialize StatData
-   * =================================*/
-
-  for(int i = 0; i < TelemetryData::Key::_LAST; i++)
-  {
-    
-    if(i == TelemetryData::Key::BMS_FAULT)
-    {
-      testStats[i].setBool(static_cast<bool>(random(0, 2))); // Excludes the max :(
-    }
-    else if(i == TelemetryData::Key::GPS_TIME)
-    {
-      testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
-    }
-    else
-    {
-      testStats[i].setDouble(random(0, 8000) / static_cast<double>(random(1, 100)));
-    }
-  }
    
   /* =================================
    * Wait for modem to associate before starting 
@@ -88,12 +67,34 @@ void setup()
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
-  
   sendStatsEveryFiveSeconds(testStats);
   shutdownOnCommand();
 }
 
 
+void randomizeData()
+{
+   /* =================================
+   * Set TelemetryData
+   * =================================*/
+
+  for(int i = 0; i < TelemetryData::Key::_LAST; i++)
+  {
+    
+    if(i == TelemetryData::Key::BMS_FAULT)
+    {
+      testStats[i].setBool(static_cast<bool>(random(0, 2))); // Excludes the max :(
+    }
+    else if(i == TelemetryData::Key::GPS_TIME)
+    {
+      testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
+    }
+    else
+    {
+      testStats[i].setDouble(random(0, 8000) / static_cast<double>(random(1, 100)));
+    }
+  }
+}
 
 void printReceivedFrame()
 {
@@ -143,6 +144,7 @@ void sendStatsEveryFiveSeconds(TelemetryData stats[])
   {
     nextTimeWeSendFrame = myTime + DELAY;
     Serial.println("Free memory: " + String(freeMemory()) + "\0");
+    randomizeData();
     if (xbee.isConnected(5000))
     {
       userFrame resp;
