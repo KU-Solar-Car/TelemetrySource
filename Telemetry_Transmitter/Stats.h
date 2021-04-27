@@ -21,31 +21,31 @@ struct TelemetryData
     MOTOR_SPD,
     _LAST
     // TODO: Add motor temperature
-  } key;
+  };
+
+  struct
+  {
+    union {
+      double doubleVal;
+      unsigned uIntVal;
+      bool boolVal;
+    };
+    bool present;
+  } arr[Key::_LAST];
+
+  void setDouble(int key, double value);
+  void setUInt(int key, unsigned value);
+  void setBool(int key, bool value);
+  void unset(int key);
+
+
+  double getDouble(int key);
+  unsigned getUInt(int key);
+  bool getBool(int key);
   
-  union Value {
-    double doubleVal;
-    unsigned uIntVal;
-    bool boolVal;
-  } value;
-  bool present;
+  bool isPresent(int key);
 
-  void setDouble(double value);
-  void setUInt(unsigned value);
-  void setBool(bool value);
-
-  inline double getDouble()
-  {
-    return value.doubleVal;
-  }
-  inline unsigned getUInt()
-  {
-    return value.uIntVal;
-  }
-  inline bool getBool()
-  {
-    return value.boolVal;
-  }
+  void clear();
   
 };
 

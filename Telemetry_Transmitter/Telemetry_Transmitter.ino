@@ -18,7 +18,7 @@ XBee xbee(Serial1);
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-TelemetryData testStats[TelemetryData::Key::_LAST];
+TelemetryData testStats;
 
 
 void setup()
@@ -83,15 +83,15 @@ void randomizeData()
     
     if(i == TelemetryData::Key::BMS_FAULT)
     {
-      testStats[i].setBool(static_cast<bool>(random(0, 2))); // Excludes the max :(
+      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
     }
     else if(i == TelemetryData::Key::GPS_TIME)
     {
-      testStats[i].setUInt(static_cast<unsigned int>(random(5001)));
+      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
     }
     else
     {
-      testStats[i].setDouble(random(0, 8000) / static_cast<double>(random(1, 100)));
+      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
     }
   }
 }
@@ -164,7 +164,7 @@ void sendStatsEveryFiveSeconds(TelemetryData stats[])
   }
 }
 
-void sendStats(TelemetryData stats[])
+void sendStats(TelemetryData stats)
 {
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
@@ -172,9 +172,9 @@ void sendStats(TelemetryData stats[])
   int bodyLength = 1; // the open bracket
   for (int k = 0; k < TelemetryData::Key::_LAST; k++)
   {
-    if (stats[k].present)
+    if (stats.isPresent(k))
     {
-      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), k, stats[k]) + 1; // append the key-value pair, plus the trailing comma
+      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), k, stats) + 1; // append the key-value pair, plus the trailing comma
       strcat(requestBuffer, ",");
     }
   }
@@ -192,20 +192,20 @@ int toKeyValuePair(char* dest, int key, TelemetryData data)
 {
   switch(key)
   {
-    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool()); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt()); break;
-    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble()); break;
-    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble()); break;
+    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
+    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt(key)); break;
+    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble(key)); break;
   }
 }
 
