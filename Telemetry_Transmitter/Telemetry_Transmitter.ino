@@ -67,7 +67,7 @@ void setup()
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
-  sendStatsEveryFiveSeconds(testStats);
+  sendStatsEveryFiveSeconds();
   shutdownOnCommand();
 }
 
@@ -137,7 +137,7 @@ void setContentLengthHeader(char* dest, int len)
   strncpy(contentLength, tmpBuffer, 3);
 }
 
-void sendStatsEveryFiveSeconds(TelemetryData stats[])
+void sendStatsEveryFiveSeconds()
 {
   unsigned long myTime = millis();
   if (myTime >= nextTimeWeSendFrame)
@@ -148,9 +148,10 @@ void sendStatsEveryFiveSeconds(TelemetryData stats[])
     if (xbee.isConnected(5000))
     {
       userFrame resp;
-      sendStats(stats);
+      sendStats(testStats);
       const unsigned long myTime = millis();
       const unsigned timeout = 10000;
+      testStats.clear();
       do
       {
         resp = xbee.read();
