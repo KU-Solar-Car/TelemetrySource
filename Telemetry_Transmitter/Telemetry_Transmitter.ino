@@ -210,6 +210,15 @@ int toKeyValuePair(char* dest, int key, TelemetryData data)
   }
 }
 
+void maxTempCallback(CAN_FRAME* frame)
+{
+  double newTemp;
+  if (testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
+  {
+    testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
+  }
+}
+
 /* =================================
  * Temporarily not being used
  * =================================*/
