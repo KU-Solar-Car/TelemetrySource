@@ -179,7 +179,15 @@ void sendStats(volatile TelemetryData& stats)
       strcat(requestBuffer, ",");
     }
   }
-  requestBuffer[strlen(requestBuffer)-1] = '}';
+  // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
+  // If not, we need to append a }, and also add 1 to the content length.
+  if (requestBuffer[strlen(requestBuffer)-1] == ',')
+    requestBuffer[strlen(requestBuffer)-1] = '}';
+  else if (requestBuffer[strlen(requestBuffer)-1] == '{')
+  {
+    strcat(requestBuffer, "}");
+    bodyLength++;
+  }
   setContentLengthHeader(requestBuffer, bodyLength);
 
   xbee.sendTCP(IPAddress(216, 58, 192, 212), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
