@@ -45,6 +45,11 @@ void setup()
     Serial.print("CAN0: Initialized Successfully.\n\r");
   else
     Serial.print("CAN0: Initialization Failed.\n\r");
+
+  /* =================================
+   * Set the CAN interrupt
+   * =================================*/
+   Can0.setGeneralCallback(CANCallback);
    
   /* =================================
    * Wait for modem to associate before starting 
