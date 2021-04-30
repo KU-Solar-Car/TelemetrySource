@@ -67,6 +67,7 @@ void setup()
 void loop()
 {
   // sendMaxTempEveryFiveSeconds();
+  // setMaxTemp();
   sendStatsEveryFiveSeconds();
   shutdownOnCommand();
 }
@@ -240,7 +241,7 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 /* =================================
  * Temporarily not being used
  * =================================*/
-//void sendMaxTempEveryFiveSeconds()
+//void setMaxTemp()
 //{
 //  // Check for received message
 //  long lMsgID;
@@ -250,16 +251,10 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  if(canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
 //  {
 //    if (lMsgID == 0x6B1) {
-//      if (cRxData[4] > maxTemp)
-//        maxTemp = cRxData[4];
+//      if (cRxData[4] > testStats.getDouble(TelemetryData::Key::BATT_TEMP))
+//        testStats.setDouble(TelemetryData::Key::BATT_TEMP, cRxData[4]);
 //    }
 //  } // end if
-//  if (millis() >= nextTimeWeSendFrame)
-//  {
-//    nextTimeWeSendFrame += DELAY;
-//    printTemperature(maxTemp);
-//    maxTemp = BYTE_MIN;
-//  }
 //}
 
 //void printTemperature(byte temp)
