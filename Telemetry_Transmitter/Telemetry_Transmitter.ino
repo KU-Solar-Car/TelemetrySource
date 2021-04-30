@@ -237,7 +237,7 @@ void CANCallback(CAN_FRAME* frame)
 void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 {
   double newTemp = frame->data.bytes[4];
-  if (testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
+  if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
   {
     testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
   }
