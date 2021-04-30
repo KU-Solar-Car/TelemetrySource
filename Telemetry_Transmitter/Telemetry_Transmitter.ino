@@ -144,7 +144,7 @@ void sendStatsEveryFiveSeconds()
   {
     nextTimeWeSendFrame = myTime + DELAY;
     Serial.println("Free memory: " + String(freeMemory()) + "\0");
-    randomizeData();
+    // randomizeData();
     if (xbee.isConnected(5000))
     {
       userFrame resp;
@@ -210,9 +210,19 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
   }
 }
 
-void maxTempCallback(CAN_FRAME* frame)
+void CANCallback(CAN_FRAME* frame)
 {
-  double newTemp;
+  // if msg id == 0x6B1, let maxTempCallBack handle it
+  if (frame->id == 0x6B1)
+  {
+    maxTempCallback(frame);
+  }
+  
+}
+
+void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
+{
+  double newTemp = frame->data.bytes[4];
   if (testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
   {
     testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
