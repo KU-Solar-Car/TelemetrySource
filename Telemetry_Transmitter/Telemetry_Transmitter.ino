@@ -18,7 +18,7 @@ XBee xbee(Serial1);
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-TelemetryData testStats;
+volatile TelemetryData testStats;
 
 
 void setup()
@@ -165,7 +165,7 @@ void sendStatsEveryFiveSeconds()
   }
 }
 
-void sendStats(TelemetryData stats)
+void sendStats(volatile TelemetryData& stats)
 {
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
@@ -189,7 +189,7 @@ void sendStats(TelemetryData stats)
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
-int toKeyValuePair(char* dest, int key, TelemetryData data)
+int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
 {
   switch(key)
   {

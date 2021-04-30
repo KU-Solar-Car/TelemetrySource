@@ -33,19 +33,19 @@ struct TelemetryData
     bool present;
   } arr[Key::_LAST];
 
-  void setDouble(int key, double value);
-  void setUInt(int key, unsigned value);
-  void setBool(int key, bool value);
-  void unset(int key);
+  void setDouble(int key, double value) volatile;
+  void setUInt(int key, unsigned value) volatile;
+  void setBool(int key, bool value) volatile;
+  void unset(int key) volatile;
 
 
-  double getDouble(int key);
-  unsigned getUInt(int key);
-  bool getBool(int key);
+  double getDouble(int key) volatile;
+  unsigned getUInt(int key) volatile;
+  bool getBool(int key) volatile;
   
-  bool isPresent(int key);
+  bool isPresent(int key) volatile;
 
-  void clear();
+  void clear() volatile;
   
 };
 
