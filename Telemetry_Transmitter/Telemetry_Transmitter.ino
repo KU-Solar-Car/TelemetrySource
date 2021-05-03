@@ -10,7 +10,6 @@
 const byte BYTE_MIN = -128;
 byte maxTemp;
 
-const unsigned long DELAY = 5000;
 unsigned long nextTimeWeSendFrame;
 // MonitoredSerial mySerial(Serial1, Serial);
 XBee xbee(Serial1);
@@ -73,7 +72,7 @@ void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   // setMaxTemp();
-  sendStatsEveryFiveSeconds();
+  sendStatsPeriodically(1000);
   shutdownOnCommand();
 }
 
@@ -143,12 +142,12 @@ void setContentLengthHeader(char* dest, int len)
   strncpy(contentLength, tmpBuffer, 3);
 }
 
-void sendStatsEveryFiveSeconds()
+void sendStatsPeriodically(int period)
 {
   unsigned long myTime = millis();
   if (myTime >= nextTimeWeSendFrame)
   {
-    nextTimeWeSendFrame = myTime + DELAY;
+    nextTimeWeSendFrame = myTime + period;
     Serial.println("Free memory: " + String(freeMemory()) + "\0");
     // randomizeData();
     if (xbee.isConnected(5000))
