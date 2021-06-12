@@ -1,6 +1,9 @@
 #ifndef STATS_H
 #define STATS_H
 
+#include "Variant.h"
+#include "Optional.h"
+
 struct TelemetryData
 {
   enum Key: int
@@ -23,31 +26,38 @@ struct TelemetryData
     // TODO: Add motor temperature
   };
 
-  struct
+  Optional<Variant<bool, unsigned, double>> arr[Key::_LAST];
+
+  template <typename T>
+  void set(int key, T value)
   {
-    union {
-      double doubleVal;
-      unsigned uIntVal;
-      bool boolVal;
-    };
-    bool present;
-  } arr[Key::_LAST];
-
-  void setDouble(int key, double value) volatile;
-  void setUInt(int key, unsigned value) volatile;
-  void setBool(int key, bool value) volatile;
-  void unset(int key) volatile;
-
-
-  double getDouble(int key) volatile;
-  unsigned getUInt(int key) volatile;
-  bool getBool(int key) volatile;
+    arr[key].present = true;
+    arr[key].value = (T) value;
+  }
   
-  bool isPresent(int key) volatile;
-
-  void clear() volatile;
+  void unset(int key)
+  {
+    arr[key].present = false;
+  }
   
+  template <typename T>
+  T get(int key)
+  {
+    return arr[key].value.as<T>();
+  }
+  
+  bool isPresent(int key)
+  {
+    return arr[key].present;
+  }
+  
+  void clear()
+  {
+    for (int i = 0; i < TelemetryData::Key::_LAST; i++)
+    {
+      unset(i);
+    }
+  }
 };
-
-
+  
 #endif

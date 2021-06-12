@@ -17,7 +17,7 @@ XBee xbee(Serial1);
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-volatile TelemetryData testStats;
+TelemetryData testStats;
 
 
 void setup()
@@ -88,15 +88,15 @@ void randomizeData()
     
     if(i == TelemetryData::Key::BMS_FAULT)
     {
-      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
+      testStats.set<bool>(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
     }
     else if(i == TelemetryData::Key::GPS_TIME)
     {
-      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
+      testStats.set<unsigned>(i, static_cast<unsigned int>(random(5001)));
     }
     else
     {
-      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
+      testStats.set<double>(i, random(0, 8000) / static_cast<double>(random(1, 100)));
     }
   }
 }
@@ -170,7 +170,7 @@ void sendStatsPeriodically(int period)
   }
 }
 
-void sendStats(volatile TelemetryData& stats)
+void sendStats(TelemetryData& stats)
 {
   
   strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
@@ -202,24 +202,24 @@ void sendStats(volatile TelemetryData& stats)
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
-int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
+int toKeyValuePair(char* dest, int key, TelemetryData& data)
 {
   switch(key)
   {
-    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble(key)); break;
+    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.get<bool>(key)); break;
+    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.get<unsigned>(key)); break;
+    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::GPS_VEL_NOR: return sprintf(dest, "\"gps_velocity_north\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::GPS_VEL_UP: return sprintf(dest, "\"gps_velocity_up\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.get<double>(key)); break;
+    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.get<double>(key)); break;
   }
 }
 
@@ -233,13 +233,64 @@ void CANCallback(CAN_FRAME* frame)
   
 }
 
+void printCNAFrame(CAN_FRAME* frame)
+{
+  char id_str[7];
+  sprintf(id_str, "%04X", frame->id);
+  
+  char family_str[7];
+  sprintf(family_str, "%04X", frame->fid);
+  
+  char rtr_str[5];
+  sprintf(rtr_str, "%02X", frame->rtr);
+  
+  char priority_str[5];
+  sprintf(priority_str, "%02X", frame->priority);
+  
+  char extended_str[5];
+  sprintf(extended_str, "%02X", frame->extended);
+  
+  char length_str[5];
+  sprintf(length_str, "%02X", frame->length);
+
+
+  Serial.println("We got a CAN frame.");
+  Serial.print("ID: ");
+  Serial.println(id_str);
+  Serial.print("Family ID: ");
+  Serial.println(family_str);
+  Serial.print("Remote Transmission Request: ");
+  Serial.println(rtr_str);
+  Serial.print("Priority: ");
+  Serial.println(priority_str);
+  Serial.print("Extended ID: ");
+  Serial.println(extended_str);
+  Serial.print("Length: ");
+  Serial.println(length_str);
+
+  for (int i = 0; i < frame->length; i++)
+  {
+    char data_byte[5];
+    sprintf(data_byte, "%02X", frame->data.bytes[i]);
+    Serial.print(data_byte);
+    Serial.print(" ");
+  }
+  Serial.println("");
+}
+
 void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 {
   double newTemp = frame->data.bytes[4];
-  if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
+  if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.get<double>(TelemetryData::Key::BATT_TEMP) < newTemp)
   {
-    testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
+    testStats.set<double>(TelemetryData::Key::BATT_TEMP, newTemp);
   }
+}
+
+void minBattVoltageCallback(CAN_FRAME* frame)
+{
+  double newVoltage = frame->data.bytes[4];
+  
 }
 
 /* =================================
