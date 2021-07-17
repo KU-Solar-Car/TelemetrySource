@@ -58,9 +58,38 @@ void XBee::sendATCommand(uint8_t frameID, const char command[], const char param
   delete[] frameData;
 }
 
-void XBee::shutdown(unsigned int timeout)
+void XBee::safeReset(unsigned timeout)
 {
-  sendATCommand(1, "SD", (char) 0x00, 1);
+  if (isShutDown(timeout))
+  {
+    sendATCommand(1, "FR", '\0', 0);
+    const unsigned long myTime = millis();
+    userFrame resp;
+    do
+    {
+      resp = read();
+      if (resp.frameType == 0x88 && strncmp(resp.frameData+1, "SD", 2) == 0 && (resp.frameData[4] == 0x00))
+        return;
+    } while (millis() < myTime+timeout);
+  }
+  else
+  {
+    shutdown(timeout, true);
+  }
+}
+
+void XBee::shutdown(unsigned int timeout, bool reboot)
+{
+  uint8_t param;
+  if (reboot)
+  {
+    param = 0x01;
+  }
+  else
+  {
+    param = 0x00;
+  }
+  sendATCommand(1, "SD", (char*) &param, 1);
   unsigned int startTime = millis();
   userFrame response;
   do
@@ -195,6 +224,25 @@ bool XBee::isConnected(unsigned timeout)
       // Serial.print("Got here: ");
       // Serial.write(resp.frameData+1, 2);
       return (resp.frameData[4] == 0x00);
+    }
+  } while (millis() < myTime+timeout);
+  Serial.println("Connectivity check timed out");
+  return false;
+}
+
+bool XBee::isShutDown(unsigned timeout)
+{
+  sendATCommand(1, "AI", nullptr, 0);
+  userFrame resp;
+  const unsigned long myTime = millis();
+  do
+  {
+    resp = read();
+    if (resp.frameType == 0x88 && strncmp(resp.frameData+1, "AI", 2) == 0)
+    {
+      // Serial.print("Got here: ");
+      // Serial.write(resp.frameData+1, 2);
+      return (resp.frameData[4] == 0x2D);
     }
   } while (millis() < myTime+timeout);
   Serial.println("Connectivity check timed out");

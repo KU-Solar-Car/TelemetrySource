@@ -12,19 +12,25 @@ byte maxTemp;
 
 unsigned long nextTimeWeSendFrame;
 // MonitoredSerial mySerial(Serial1, Serial);
-XBee xbee(Serial1);
+XBee xbee(Serial2);
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
 volatile TelemetryData testStats;
 
+volatile bool resetButtonPressed = false;
+volatile bool shutdownButtonPressed = false;
+
+const int SHUTDOWN_PIN = 2;
+const int RESET_PIN = 3;
+
 
 void setup()
 {
   // Set the serial interface baud rate
   Serial.begin(115200);
-  Serial1.begin(9600);
+  Serial2.begin(9600);
 
   // Suppress the serial
   // mySerial.suppress();
@@ -66,6 +72,14 @@ void setup()
    * =================================*/
   maxTemp = -128;
   nextTimeWeSendFrame = 0;
+
+  // Shutdown and reset pins
+  pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
+  pinMode(RESET_PIN, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown_on_interrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RESET_PIN), reset_on_interrupt, FALLING);
+
 }
 
 void loop()
@@ -76,6 +90,8 @@ void loop()
   shutdownOnCommand();
 }
 
+void shutdown_on_interrupt() {shutdownButtonPressed = true;}
+void reset_on_interrupt() {resetButtonPressed = true;}
 
 void randomizeData()
 {
@@ -118,11 +134,12 @@ void printReceivedFrame()
 
 void shutdownOnCommand()
 {
-  if (Serial.read() == 's')
+  char cmd = Serial.read();
+  if (cmd == 's' || shutdownButtonPressed)
   {
     Serial.println("Shutting down, please wait up to 2 minutes...");
     if (Serial.read() != 'c')
-      xbee.shutdown(120000);
+      xbee.shutdown(120000, false);
     else
     {
       if (xbee.shutdownCommandMode())
@@ -130,6 +147,11 @@ void shutdownOnCommand()
       else
         Serial.println("Shutdown failed");
     }
+  }
+  else if (cmd == 'r' || resetButtonPressed)
+  {
+    Serial.println("Resetting, please wait up to 2 minutes...");
+    xbee.safeReset(120000);
   }
 }
 
