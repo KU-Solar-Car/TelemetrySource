@@ -96,15 +96,9 @@ void XBee::shutdown(unsigned int timeout, bool reboot)
   do
   {
     response = read();
-  } while (response.frameData[0] != 1 && millis() < (startTime + timeout));
-  if (!(response == NULL_USER_FRAME))
-  {
-    Serial.println("Got response:");
-    Serial.println("Frame type: " + String(response.frameType, HEX));
-    Serial.println("Frame ID: " + String(response.frameData[0], HEX));
-    Serial.println("Command: " + String(response.frameData[1]) + String(response.frameData[2]));
-    Serial.println("Status: " + String((uint8_t)response.frameData[3]));
-  }
+    if (response.frameType == 0x8A && response.frameData[0] == 0x03)
+      return;
+  } while (millis() < (startTime + timeout));
   else
   {
     Serial.println("Timed Out.");
