@@ -77,8 +77,8 @@ void setup()
   pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
   pinMode(RESET_PIN, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown_on_interrupt, FALLING);
-  attachInterrupt(digitalPinToInterrupt(RESET_PIN), reset_on_interrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown_interrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RESET_PIN), reset_interrupt, FALLING);
 
 }
 
@@ -90,8 +90,8 @@ void loop()
   shutdownOnCommand();
 }
 
-void shutdown_on_interrupt() {shutdownButtonPressed = true;}
-void reset_on_interrupt() {resetButtonPressed = true;}
+void shutdown_interrupt() {shutdownButtonPressed = true;}
+void reset_interrupt() {resetButtonPressed = true;}
 
 void randomizeData()
 {
