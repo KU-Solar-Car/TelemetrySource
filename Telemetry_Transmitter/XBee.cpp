@@ -64,14 +64,13 @@ void XBee::safeReset(unsigned timeout)
   {
     sendATCommand(1, "FR", '\0', 0);
     const unsigned long myTime = millis();
-    const unsigned resetTimeout = 200;
     userFrame resp;
     do
     {
       resp = read();
-      if (resp.frameType == 0x88 && strncmp(resp.frameData+1, "FR", 2) == 0 && (resp.frameData[4] == 0x00))
+      if (resp.frameType == 0x8A && resp.frameData[0] == 0x02)
         return;
-    } while (millis() < myTime+resetTimeout);
+    } while (millis() < myTime+timeout);
     Serial.println("Timed out.");
   }
   else
