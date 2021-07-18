@@ -184,6 +184,15 @@ userFrame XBee::read()
   Serial.write(m_rxBuffer.frameData(), m_rxBuffer.frameDataLength());
   Serial.println();
 
+  Serial.print("Frame Data Hex: ");
+  for (int i = 0; i < m_rxBuffer.frameDataLength(); i++)
+  {
+    char c[1];
+    sprintf(c, "%02X ", m_rxBuffer.frameData()[i]);
+    Serial.print(c);
+  }
+  Serial.println();
+
   char sum_str[13];
   sprintf(sum_str, "Checksum: %02X", m_rxBuffer.buf[m_rxBuffer.length()-1]);
   Serial.println(sum_str);
