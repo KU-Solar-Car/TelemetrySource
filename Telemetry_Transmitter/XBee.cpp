@@ -99,10 +99,7 @@ void XBee::shutdown(unsigned int timeout, bool reboot)
     if (response.frameType == 0x8A && response.frameData[0] == 0x03)
       return;
   } while (millis() < (startTime + timeout));
-  else
-  {
-    Serial.println("Timed Out.");
-  }
+  Serial.println("Timed Out.");
   
 }
 
