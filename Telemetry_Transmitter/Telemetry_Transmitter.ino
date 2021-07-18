@@ -6,6 +6,7 @@
 #include "Frames.h"
 #include <MemoryFree.h>
 #include <pgmStrToRAM.h>
+#include <DueTimer.h>
 
 const byte BYTE_MIN = -128;
 byte maxTemp;
@@ -22,8 +23,12 @@ volatile TelemetryData testStats;
 volatile bool resetButtonPressed = false;
 volatile bool shutdownButtonPressed = false;
 
+volatile bool resetButtonMaybePressed = false;
+volatile bool shutdownButtonMaybePressed = false;
+
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
+const unsigned BUTTON_DEBOUNCE_MICROS = 1000;
 
 
 void setup()
@@ -77,8 +82,12 @@ void setup()
   pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
   pinMode(RESET_PIN, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown_interrupt, FALLING);
-  attachInterrupt(digitalPinToInterrupt(RESET_PIN), reset_interrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(SHUTDOWN_PIN), shutdown_debounce_interrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RESET_PIN), reset_debounce_interrupt, FALLING);
+
+  // Debounce ISRs
+  Timer0.attachInterrupt(shutdown_interrupt);
+  Timer1.attachInterrupt(reset_interrupt);
 
 }
 
@@ -90,8 +99,34 @@ void loop()
   shutdownOnCommand();
 }
 
-void shutdown_interrupt() {shutdownButtonPressed = true;}
-void reset_interrupt() {resetButtonPressed = true;}
+void shutdown_interrupt()
+{
+  if (digitalRead(digitalPinToInterrupt(SHUTDOWN_PIN)) == LOW)
+    shutdownButtonPressed = true;
+  shutdownButtonMaybePressed = false;
+  Timer0.stop();
+}
+void reset_interrupt()
+{
+  if (digitalRead(digitalPinToInterrupt(RESET_PIN)) == LOW)
+    resetButtonPressed = true;
+  resetButtonMaybePressed = false;
+  Timer1.stop();
+}
+
+void shutdown_debounce_interrupt()
+{
+  // first, check that we're not already debouncing.
+  if (!shutdownButtonMaybePressed)
+    shutdownButtonMaybePressed = true;
+    Timer0.start(BUTTON_DEBOUNCE_MICROS);
+}
+void reset_debounce_interrupt()
+{
+  if (!resetButtonMaybePressed)
+    resetButtonMaybePressed = true;
+    Timer1.start(BUTTON_DEBOUNCE_MICROS);
+}
 
 void randomizeData()
 {
@@ -156,7 +191,6 @@ void shutdownOnCommand()
     xbee.safeReset(120000);
   }
 }
-
 
 void setContentLengthHeader(char* dest, int len)
 {
