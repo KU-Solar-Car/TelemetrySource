@@ -63,20 +63,20 @@ void XBee::safeReset(unsigned timeout)
   if (isShutDown(timeout))
   {
     sendATCommand(1, "FR", '\0', 0);
-    const unsigned long myTime = millis();
-    userFrame resp;
-    do
-    {
-      resp = read();
-      if (resp.frameType == 0x8A && resp.frameData[0] == 0x02)
-        return;
-    } while (millis() < myTime+timeout);
-    Serial.println("Timed out.");
   }
   else
   {
     shutdown(timeout, true);
   }
+      const unsigned long myTime = millis();
+  userFrame resp;
+  do
+  {
+    resp = read();
+    if (resp.frameType == 0x8A && resp.frameData[0] == 0x02)
+      return;
+  } while (millis() < myTime+timeout);
+  Serial.println("Timed out.");
 }
 
 void XBee::shutdown(unsigned int timeout, bool reboot)
