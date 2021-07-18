@@ -138,6 +138,7 @@ void shutdownOnCommand()
   if (cmd == 's' || shutdownButtonPressed)
   {
     Serial.println("Shutting down, please wait up to 2 minutes...");
+    shutdownButtonPressed = false;
     if (Serial.read() != 'c')
       xbee.shutdown(120000, false);
     else
@@ -151,6 +152,7 @@ void shutdownOnCommand()
   else if (cmd == 'r' || resetButtonPressed)
   {
     Serial.println("Resetting, please wait up to 2 minutes...");
+    resetButtonPressed = false;
     xbee.safeReset(120000);
   }
 }
