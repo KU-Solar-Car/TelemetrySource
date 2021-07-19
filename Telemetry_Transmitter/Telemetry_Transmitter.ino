@@ -183,12 +183,14 @@ void shutdownOnCommand()
         Serial.println("Shutdown failed");
     }
     shutdownButtonPressed = false;
+    resetButtonPressed = false;
   }
   else if (cmd == 'r' || resetButtonPressed)
   {
     Serial.println("Resetting, please wait up to 4 minutes...");
     xbee.safeReset(120000);
     resetButtonPressed = false;
+    shutdownButtonPressed = false;
   }
 }
 
