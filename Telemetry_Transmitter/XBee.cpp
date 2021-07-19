@@ -96,7 +96,7 @@ void XBee::shutdown(unsigned int timeout, bool reboot)
   do
   {
     response = read();
-    if (response.frameType == 0x8A && response.frameData[0] == 0x03)
+    if (response.frameType == 0x88 && strncmp(response.frameData+1, "SD", 2) == 0 && response.frameData[3] == 0x00)
       return;
   } while (millis() < (startTime + timeout));
   Serial.println("Timed Out.");
