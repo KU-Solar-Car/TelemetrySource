@@ -28,7 +28,7 @@ volatile bool shutdownButtonMaybePressed = false;
 
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
-const unsigned BUTTON_DEBOUNCE_MICROS = 1000;
+const unsigned BUTTON_DEBOUNCE_MICROS = 100000;
 
 
 void setup()
