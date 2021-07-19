@@ -68,7 +68,7 @@ void XBee::safeReset(unsigned timeout)
   {
     shutdown(timeout, true);
   }
-      const unsigned long myTime = millis();
+  const unsigned long myTime = millis();
   userFrame resp;
   do
   {
