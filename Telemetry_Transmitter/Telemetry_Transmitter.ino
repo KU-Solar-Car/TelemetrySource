@@ -255,7 +255,7 @@ void sendStats(volatile TelemetryData& stats)
   }
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  xbee.sendTCP(IPAddress(216, 58, 192, 212), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
+  xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   Serial.println(requestBuffer);
 
   // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
