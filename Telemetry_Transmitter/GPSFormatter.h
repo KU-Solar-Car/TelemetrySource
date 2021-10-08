@@ -37,8 +37,8 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats) {
   
   // Variables in question.
   float flat, flon;
-  unsigned long presDate, presTime;
-  unsigned long fixAge, presAge;
+  unsigned presDate, presTime;
+  unsigned fixAge, presAge;
   
   gps.get_datetime(&presDate, &presTime, &presAge);
   

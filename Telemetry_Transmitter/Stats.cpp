@@ -6,7 +6,7 @@ void TelemetryData::setDouble(int key, double value) volatile
   arr[key].doubleVal = value;
 }
 
-void TelemetryData::setUInt(int key, unsigned long value) volatile
+void TelemetryData::setUInt(int key, unsigned value) volatile
 {
   arr[key].present = true;
   arr[key].uIntVal = value;
@@ -29,7 +29,7 @@ double TelemetryData::getDouble(int key) volatile
   return arr[key].doubleVal;
 }
 
-unsigned long TelemetryData::getUInt(int key) volatile
+unsigned TelemetryData::getUInt(int key) volatile
 {
   return arr[key].uIntVal;
 }
