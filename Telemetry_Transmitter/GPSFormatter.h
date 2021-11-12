@@ -1,4 +1,4 @@
-#ifndef GPSFORMATTER
+ #ifndef GPSFORMATTER
 #define GPSFORMATTER
 
 #include <TinyGPS.h> // https://github.com/mikalhart/TinyGPS
@@ -27,7 +27,6 @@ void GPSFormatter::readSerial() {
   {
     while (serial->available()) {
       char red = serial->read();
-      // Serial.print(red);
       gps.encode(red);
     }
   } while (millis() - start < delay);
@@ -37,10 +36,18 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats) {
   
   // Variables in question.
   float flat, flon;
-  unsigned presDate, presTime;
-  unsigned fixAge, presAge;
-  
+  unsigned long presDate, presTime;
+  unsigned long fixAge, presAge;
+
   gps.get_datetime(&presDate, &presTime, &presAge);
+  /*
+  Serial.print("Date: ");
+  Serial.print(presDate);
+  Serial.print('\n');
+  Serial.print("Time: ");
+  Serial.print(presTime);
+  Serial.print('\n');
+  */
   
   if (!(presAge == TinyGPS::GPS_INVALID_AGE)) {
     stats.setUInt(TelemetryData::Key::GPS_DATE, presDate);

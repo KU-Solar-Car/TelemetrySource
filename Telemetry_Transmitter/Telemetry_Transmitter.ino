@@ -104,7 +104,6 @@ void loop()
   gpsFormatter.readSerial();
   gpsFormatter.writeToData(testStats);
 
-  
   // sendStatsPeriodically(1000);
   sendStats(testStats);
 
