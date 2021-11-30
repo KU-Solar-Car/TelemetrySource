@@ -9,6 +9,15 @@
 #include <pgmStrToRAM.h>
 #include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
 
+#define DEBUG_BUILD // Remove when using with DriverHUD
+
+// Debug print macro. Do while loop ensures a semicolon is used.
+#ifdef DEBUG_BUILD
+  #define DEBUG(x) do { Serial.println(x); } while (0)
+#else
+  #define DEBUG(x) do {} while (0)
+#endif
+
 const byte BYTE_MIN = -128;
 byte maxTemp;
 
@@ -52,17 +61,17 @@ void setup()
    * Set the XBee in API Mode
    * =================================*/
   if(xbee.configure())
-    Serial.println("Configuration successful");
+    DEBUG("Configuration successful");
   else
-    Serial.println("Configuration failed");
+    DEBUG("Configuration failed");
     
   /* =================================
    * Initialize CAN board
    * =================================*/
   if(canInit(0, CAN_BPS_250K) == CAN_OK)
-    Serial.print("CAN0: Initialized Successfully.\n\r");
+    DEBUG("CAN0: Initialized Successfully.\n\r");
   else
-    Serial.print("CAN0: Initialization Failed.\n\r");
+    DEBUG("CAN0: Initialization Failed.\n\r");
 
   /* =================================
    * Set the CAN interrupt
@@ -73,12 +82,12 @@ void setup()
    * Wait for modem to associate before starting 
    * =================================*/
   userFrame status;
-//  Serial.println("Waiting for network to associate...");
+//  DEBUG("Waiting for network to associate...");
 //  do
 //  {
 //    status = xbee.read();
 //  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
-//  Serial.println("Network associated.");
+//  DEBUG("Network associated.");
   
   /* =================================
    * Initialize variables that track stuff
@@ -177,16 +186,19 @@ void printReceivedFrame()
   userFrame recvd = xbee.read();
   if (!(recvd == NULL_USER_FRAME))
   {
-    Serial.println("Got frame:");
-    Serial.println("Frame type: " + String(recvd.frameType, HEX));
-    Serial.print("Frame data: ");
-    Serial.write(recvd.frameData, recvd.frameDataLength);
-    Serial.println("");
+    #ifdef DEBUG_BUILD
+      Serial.println("Got frame:");
+      Serial.println("Frame type: " + String(recvd.frameType, HEX));
+      Serial.print("Frame data: ");
+      Serial.write(recvd.frameData, recvd.frameDataLength);
+      Serial.println("");
+    #endif
   }
   // else
-    // Serial.println("Got here nothing :(");
+    // DEBUG("Got here nothing :(");
 }
 
+// TODO: Format the output of this function in a way the DriverHUD can understand
 void shutdownOnCommand()
 {
   char cmd = Serial.read();
@@ -228,7 +240,7 @@ void sendStatsPeriodically(int period)
   if (myTime >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame = myTime + period;
-    Serial.println("Free memory: " + String(freeMemory()) + "\0");
+    DEBUG("Free memory: " + String(freeMemory()) + "\0");
     // randomizeData();
     if (xbee.isConnected(5000))
     {
@@ -242,11 +254,11 @@ void sendStatsPeriodically(int period)
         resp = xbee.read();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
       if (resp.frameType != 0xB0)
-        Serial.println("Request timed out.");
+        DEBUG("Request timed out.");
     }
     else
-      Serial.println("Modem is not connected, skipping this time.");
-    Serial.println("");
+      DEBUG("Modem is not connected, skipping this time.");
+    DEBUG("");
   }
 }
 
@@ -283,7 +295,7 @@ void sendStats(volatile TelemetryData& stats)
   strcat(requestBuffer, dataBuffer);
   setContentLengthHeader(requestBuffer, bodyLength);
   // xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
-  Serial.println(requestBuffer);
+  DEBUG(requestBuffer);
 }
 
 // Send stats to DriverHUD over serial
