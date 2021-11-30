@@ -19,6 +19,9 @@ unsigned long nextTimeWeSendFrame;
 XBee xbee(Serial2);
 GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
+const size_t DATA_BUFFER_SIZE = 550;
+char dataBuffer[DATA_BUFFER_SIZE];
+
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
@@ -98,7 +101,6 @@ void setup()
 
 void loop()
 {
-  // sendMaxTempEveryFiveSeconds();
   // setMaxTemp();
 
   gpsFormatter.readSerial();
@@ -248,37 +250,47 @@ void sendStatsPeriodically(int period)
   }
 }
 
-void sendStats(volatile TelemetryData& stats)
+int fillDataBuffer(volatile TelemetryData& stats)
 {
+  strcpy(dataBuffer, "{");
   
-  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
-  strcat(requestBuffer, "{");
   int bodyLength = 1; // the open bracket
   for (int k = 0; k < TelemetryData::Key::_LAST; k++)
   {
     if (stats.isPresent(k))
     {
-      bodyLength += toKeyValuePair(requestBuffer + strlen(requestBuffer), k, stats) + 1; // append the key-value pair, plus the trailing comma
-      strcat(requestBuffer, ",");
+      bodyLength += toKeyValuePair(dataBuffer + strlen(dataBuffer), k, stats) + 1; // append the key-value pair, plus the trailing comma
+      strcat(dataBuffer, ",");
     }
   }
   // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
   // If not, we need to append a }, and also add 1 to the content length.
-  if (requestBuffer[strlen(requestBuffer)-1] == ',')
-    requestBuffer[strlen(requestBuffer)-1] = '}';
-  else if (requestBuffer[strlen(requestBuffer)-1] == '{')
+  if (dataBuffer[strlen(dataBuffer)-1] == ',')
+    dataBuffer[strlen(dataBuffer)-1] = '}';
+  else if (dataBuffer[strlen(dataBuffer)-1] == '{')
   {
-    strcat(requestBuffer, "}");
+    strcat(dataBuffer, "}");
     bodyLength++;
   }
-  setContentLengthHeader(requestBuffer, bodyLength);
+  return bodyLength;
+}
 
+// Send stats to the cloud via Xbee
+void sendStats(volatile TelemetryData& stats)
+{
+  int bodyLength = fillDataBuffer(stats);
+  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
+  strcat(requestBuffer, dataBuffer);
+  setContentLengthHeader(requestBuffer, bodyLength);
   // xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   Serial.println(requestBuffer);
+}
 
-  // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
-  
-  // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
+// Send stats to DriverHUD over serial
+void sendStatsSerial(volatile TelemetryData& stats)
+{
+  fillDataBuffer(stats);
+  Serial.println(dataBuffer);
 }
 
 int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
@@ -342,9 +354,8 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  } // end if
 //}
 
-//void printTemperature(byte temp)
+//void httpsTest()
 //{
-//  Serial.print("High Temperature: ");
-//  Serial.print(temp);
-//  Serial.print("\n\r");
+//  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
+//  xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 //}
