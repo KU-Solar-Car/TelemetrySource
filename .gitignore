@@ -1,2 +1,3 @@
 .theia/
 build/
+Telemetry_Transmitter/auth_key.h

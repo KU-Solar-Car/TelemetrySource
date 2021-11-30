@@ -5,6 +5,7 @@
 #include "IPAddress.h"
 #include "Frames.h"
 #include "GPSFormatter.h"
+#include "auth_key.h"
 #include <MemoryFree.h>   // https://github.com/mpflaga/Arduino-MemoryFree
 #include <pgmStrToRAM.h>
 #include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
@@ -291,10 +292,12 @@ int fillDataBuffer(volatile TelemetryData& stats)
 void sendStats(volatile TelemetryData& stats)
 {
   int bodyLength = fillDataBuffer(stats);
-  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: eiw932FekWERiajEFIAjej94302Fajde\r\n\r\n");
+  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: ");
+  strcat(requestBuffer, AUTH_KEY);
+  strcat(requestBuffer, "\r\n\r\n");
   strcat(requestBuffer, dataBuffer);
   setContentLengthHeader(requestBuffer, bodyLength);
-  // xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
+  //xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   DEBUG(requestBuffer);
 }
 
