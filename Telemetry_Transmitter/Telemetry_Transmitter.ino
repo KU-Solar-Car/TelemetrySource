@@ -107,10 +107,12 @@ void loop()
   // sendStatsPeriodically(1000);
   sendStats(testStats);
 
+  /*
   unsigned long myTime = millis();
   while(myTime + 2000 > millis()) {
     continue;
   }
+  */
   
   shutdownOnCommand();
 }
@@ -287,8 +289,8 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
     case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_DATE: return sprintf(dest, "\"gps_date\":%u", data.getUInt(key)); break;
+    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%06u", data.getUInt(key)); break;
+    case TelemetryData::Key::GPS_DATE: return sprintf(dest, "\"gps_date\":%06u", data.getUInt(key)); break;
     case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble(key)); break;
