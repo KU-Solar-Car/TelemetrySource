@@ -1,4 +1,4 @@
- #ifndef GPSFORMATTER
+#ifndef GPSFORMATTER
 #define GPSFORMATTER
 
 #include <TinyGPS.h> // https://github.com/mikalhart/TinyGPS
