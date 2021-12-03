@@ -50,10 +50,9 @@ const unsigned BUTTON_DEBOUNCE_MICROS = 10000;
 
 void setup()
 {
-  // Set the serial interface baud rate
-  Serial.begin(115200);
-  Serial2.begin(9600); // Interface with xbee.
-  Serial1.begin(4800); // Interface with GPS.
+  Serial.begin(115200); // Interface with DriverHUD and/or debugging
+  Serial2.begin(9600); // Interface with XBee
+  Serial1.begin(4800); // Interface with GPS
   
   // Suppress the serial
   // mySerial.suppress();
@@ -111,13 +110,17 @@ void setup()
 
 void loop()
 {
+  // Read most data from CAN bus
   // setMaxTemp();
 
+  // Read GPS values
   gpsFormatter.readSerial();
   gpsFormatter.writeToData(testStats);
 
+  // Send stats to XBee and DriverHUD
   // sendStatsPeriodically(1000);
   sendStats(testStats);
+  sendStatsSerial(testStats);
 
   /*
   unsigned long myTime = millis();
@@ -200,6 +203,7 @@ void printReceivedFrame()
 }
 
 // TODO: Format the output of this function in a way the DriverHUD can understand
+// Also handle reading a different character that indicates a request for data from DriverHUD
 void shutdownOnCommand()
 {
   char cmd = Serial.read();
@@ -225,14 +229,6 @@ void shutdownOnCommand()
     resetButtonPressed = false;
     shutdownButtonPressed = false;
   }
-}
-
-void setContentLengthHeader(char* dest, int len)
-{
-  char* contentLength = strstr(dest, "Content-Length: ") + 16;
-  char tmpBuffer[4]; 
-  sprintf(tmpBuffer, "%03u", len);
-  strncpy(contentLength, tmpBuffer, 3);
 }
 
 void sendStatsPeriodically(int period)
@@ -292,11 +288,16 @@ int fillDataBuffer(volatile TelemetryData& stats)
 void sendStats(volatile TelemetryData& stats)
 {
   int bodyLength = fillDataBuffer(stats);
-  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: 000\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: ");
+  char bodyLengthStr[4]; 
+  sprintf(bodyLengthStr, "%03u", bodyLength);
+  
+  strcpy(requestBuffer, "POST /car HTTP/1.1\r\nContent-Length: ");
+  strcat(requestBuffer, bodyLengthStr);
+  strcat(requestBuffer, "\r\nHost: ku-solar-car-b87af.appspot.com\r\nContent-Type: application/json\r\nAuthentication: ");
   strcat(requestBuffer, AUTH_KEY);
   strcat(requestBuffer, "\r\n\r\n");
   strcat(requestBuffer, dataBuffer);
-  setContentLengthHeader(requestBuffer, bodyLength);
+  
   //xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   DEBUG(requestBuffer);
 }
