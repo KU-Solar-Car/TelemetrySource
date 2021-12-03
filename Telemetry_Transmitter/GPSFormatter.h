@@ -52,19 +52,12 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats) {
   if (!(presAge == TinyGPS::GPS_INVALID_AGE)) {
     stats.setUInt(TelemetryData::Key::GPS_DATE, presDate);
     stats.setUInt(TelemetryData::Key::GPS_TIME, presTime);
-    Serial.print("Wrote date: ");
-    Serial.print(presDate);
-    Serial.print("\r\n");
   }
 
   gps.f_get_position(&flat, &flon, &fixAge);
   if(!(flat == TinyGPS::GPS_INVALID_F_ANGLE || flon == TinyGPS::GPS_INVALID_F_ANGLE)) {
     stats.setDouble(TelemetryData::Key::GPS_LAT, flat);
     stats.setDouble(TelemetryData::Key::GPS_LON, flon);
-
-    Serial.print("Wrote lon: ");
-    Serial.print(flon);
-    Serial.print("\r\n");
   }
 }
 
