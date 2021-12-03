@@ -19,6 +19,12 @@
 #include <pgmStrToRAM.h>
 #include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
 
+// Number of milliseconds to wait between transmitting data packets
+const int XBEE_TX_INTERVAL = 2000;
+
+// Number of milliseconds to wait between checking for commands from DriverHUD
+const int DRIVERHUD_CHECK_INTERVAL = 33; // 30 fps
+
 const byte BYTE_MIN = -128;
 byte maxTemp;
 
@@ -30,7 +36,8 @@ XBee xbee(Serial2);
 GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
 const size_t DATA_BUFFER_SIZE = 550;
-char dataBuffer[DATA_BUFFER_SIZE];
+char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
+char serialDataBuffer[DATA_BUFFER_SIZE]; // Buffer for DriverHUD data (this is separate because of interrupts)
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -87,7 +94,7 @@ void setup()
 //  {
 //    status = xbee.read();
 //  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
-//  DEBUG("Network associated.");
+//  DEBUG("XBee: Network associated.");
   
   /* =================================
    * Initialize variables that track stuff
@@ -106,6 +113,8 @@ void setup()
   Timer0.attachInterrupt(shutdown_interrupt);
   Timer1.attachInterrupt(reset_interrupt);
 
+  // Check for commands from the DriverHUD frequently, even if doing something else
+  Timer2.attachInterrupt(serial_commands_interrupt).setPeriod(DRIVERHUD_CHECK_INTERVAL*1000).start();
 }
 
 void loop()
@@ -118,17 +127,18 @@ void loop()
   gpsFormatter.writeToData(testStats);
 
   // Send stats to XBee and DriverHUD
-  // sendStatsPeriodically(1000);
+  // sendStatsPeriodically(XBEE_TX_INTERVAL);
   sendStats(testStats);
 
   /*
   unsigned long myTime = millis();
-  while(myTime + 2000 > millis()) {
+  while(myTime + XBEE_TX_INTERVAL > millis()) {
     continue;
   }
   */
-  
-  runCommands();
+
+  // Check for serial commands and shutdown/reset buttons
+  shutdownOnCommand();
 }
 
 void shutdown_interrupt()
@@ -201,11 +211,17 @@ void printReceivedFrame()
     // DEBUG("Got here nothing :(");
 }
 
-// TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
-void runCommands()
-{
+void serial_commands_interrupt() {
   char cmd = Serial.read();
-  if (cmd == 's' || shutdownButtonPressed)
+  if (cmd == 's') shutdownButtonPressed = true;
+  else if (cmd == 'r') resetButtonPressed = true;
+  else if (cmd == 'd') sendStatsSerial(testStats); // DriverHUD requesting data
+}
+
+// TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
+void shutdownOnCommand()
+{
+  if (shutdownButtonPressed)
   {
     Serial.println("Shutting down, please wait up to 2 minutes...");
     if (Serial.read() != 'c')
@@ -220,15 +236,12 @@ void runCommands()
     shutdownButtonPressed = false;
     resetButtonPressed = false;
   }
-  else if (cmd == 'r' || resetButtonPressed)
+  else if (resetButtonPressed)
   {
     Serial.println("Resetting, please wait up to 4 minutes...");
     xbee.safeReset(120000);
     resetButtonPressed = false;
     shutdownButtonPressed = false;
-  }
-  else if (cmd == 'd') {  // DriverHUD requesting data
-    sendStatsSerial(testStats);
   }
 }
 
@@ -260,26 +273,26 @@ void sendStatsPeriodically(int period)
   }
 }
 
-int fillDataBuffer(volatile TelemetryData& stats)
+int fillDataBuffer(char buf[], volatile TelemetryData& stats)
 {
-  strcpy(dataBuffer, "{");
+  strcpy(buf, "{");
   
   int bodyLength = 1; // the open bracket
   for (int k = 0; k < TelemetryData::Key::_LAST; k++)
   {
     if (stats.isPresent(k))
     {
-      bodyLength += toKeyValuePair(dataBuffer + strlen(dataBuffer), k, stats) + 1; // append the key-value pair, plus the trailing comma
-      strcat(dataBuffer, ",");
+      bodyLength += toKeyValuePair(buf + strlen(buf), k, stats) + 1; // append the key-value pair, plus the trailing comma
+      strcat(buf, ",");
     }
   }
   // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
   // If not, we need to append a }, and also add 1 to the content length.
-  if (dataBuffer[strlen(dataBuffer)-1] == ',')
-    dataBuffer[strlen(dataBuffer)-1] = '}';
-  else if (dataBuffer[strlen(dataBuffer)-1] == '{')
+  if (buf[strlen(buf)-1] == ',')
+    buf[strlen(buf)-1] = '}';
+  else if (buf[strlen(buf)-1] == '{')
   {
-    strcat(dataBuffer, "}");
+    strcat(buf, "}");
     bodyLength++;
   }
   return bodyLength;
@@ -288,7 +301,7 @@ int fillDataBuffer(volatile TelemetryData& stats)
 // Send stats to the cloud via Xbee
 void sendStats(volatile TelemetryData& stats)
 {
-  int bodyLength = fillDataBuffer(stats);
+  int bodyLength = fillDataBuffer(dataBuffer, stats);
   char bodyLengthStr[4]; 
   sprintf(bodyLengthStr, "%03u", bodyLength);
   
@@ -306,8 +319,8 @@ void sendStats(volatile TelemetryData& stats)
 // Send stats to DriverHUD over serial
 void sendStatsSerial(volatile TelemetryData& stats)
 {
-  fillDataBuffer(stats);
-  Serial.println(dataBuffer);
+  fillDataBuffer(serialDataBuffer, stats);
+  Serial.println(serialDataBuffer);
 }
 
 int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
