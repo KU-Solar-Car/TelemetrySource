@@ -129,7 +129,7 @@ void loop()
   }
   */
   
-  shutdownOnCommand();
+  runCommands();
 }
 
 void shutdown_interrupt()
@@ -202,9 +202,8 @@ void printReceivedFrame()
     // DEBUG("Got here nothing :(");
 }
 
-// TODO: Format the output of this function in a way the DriverHUD can understand
-// Also handle reading a different character that indicates a request for data from DriverHUD
-void shutdownOnCommand()
+// TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
+void runCommands()
 {
   char cmd = Serial.read();
   if (cmd == 's' || shutdownButtonPressed)
@@ -228,6 +227,9 @@ void shutdownOnCommand()
     xbee.safeReset(120000);
     resetButtonPressed = false;
     shutdownButtonPressed = false;
+  }
+  else if (cmd == 'd') {  // DriverHUD requesting data
+    sendStatsSerial(testStats);
   }
 }
 
