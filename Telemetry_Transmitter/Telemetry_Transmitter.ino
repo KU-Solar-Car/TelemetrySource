@@ -1,3 +1,12 @@
+#define DEBUG_BUILD // Remove when using with DriverHUD
+
+// Debug print macro. Do while loop ensures a semicolon is used.
+#ifdef DEBUG_BUILD
+  #define DEBUG(x) do { Serial.println(x); } while (0)
+#else
+  #define DEBUG(x) do {} while (0)
+#endif
+
 #include "DueCANLayer.h"
 #include "XBee.h"
 #include "MonitoredSerial.h"
@@ -9,15 +18,6 @@
 #include <MemoryFree.h>   // https://github.com/mpflaga/Arduino-MemoryFree
 #include <pgmStrToRAM.h>
 #include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
-
-#define DEBUG_BUILD // Remove when using with DriverHUD
-
-// Debug print macro. Do while loop ensures a semicolon is used.
-#ifdef DEBUG_BUILD
-  #define DEBUG(x) do { Serial.println(x); } while (0)
-#else
-  #define DEBUG(x) do {} while (0)
-#endif
 
 const byte BYTE_MIN = -128;
 byte maxTemp;
@@ -61,9 +61,9 @@ void setup()
    * Set the XBee in API Mode
    * =================================*/
   if(xbee.configure())
-    DEBUG("Configuration successful");
+    DEBUG("XBee: Configuration successful");
   else
-    DEBUG("Configuration failed");
+    DEBUG("XBee: Configuration failed");
     
   /* =================================
    * Initialize CAN board
@@ -120,7 +120,6 @@ void loop()
   // Send stats to XBee and DriverHUD
   // sendStatsPeriodically(1000);
   sendStats(testStats);
-  sendStatsSerial(testStats);
 
   /*
   unsigned long myTime = millis();

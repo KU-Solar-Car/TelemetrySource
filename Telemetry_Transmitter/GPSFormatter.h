@@ -1,5 +1,5 @@
-#ifndef GPSFORMATTER
-#define GPSFORMATTER
+#ifndef GPSFORMATTER_H
+#define GPSFORMATTER_H
 
 #include <TinyGPS.h> // https://github.com/mikalhart/TinyGPS
 #include "Stats.h"
@@ -16,55 +16,55 @@ public:
   void writeToData(volatile TelemetryData& stats);
 };
 
-GPSFormatter::GPSFormatter(Stream* serialport) {
+GPSFormatter::GPSFormatter(Stream* serialport)
+{
   serial = serialport;
 }
 
-void GPSFormatter::readSerial() {
-  int delay = 5000;
+void GPSFormatter::readSerial()
+{
+  int delay = 2000;
   unsigned long start = millis();
   do 
   {
-    while (serial->available()) {
+    while (serial->available())
+    {
       char red = serial->read();
       gps.encode(red);
     }
   } while (millis() - start < delay);
 }
 
-void GPSFormatter::writeToData(volatile TelemetryData& stats) {
-  
-  // Variables in question.
+void GPSFormatter::writeToData(volatile TelemetryData& stats)
+{
   float flat, flon;
   unsigned long presDate, presTime;
   unsigned long fixAge, presAge;
 
   gps.get_datetime(&presDate, &presTime, &presAge);
-  /*
-  Serial.print("Date: ");
-  Serial.print(presDate);
-  Serial.print('\n');
-  Serial.print("Time: ");
-  Serial.print(presTime);
-  Serial.print('\n');
-  */
-  
-  if (!(presAge == TinyGPS::GPS_INVALID_AGE)) {
+  if (!(presAge == TinyGPS::GPS_INVALID_AGE))
+  {
     stats.setUInt(TelemetryData::Key::GPS_DATE, presDate);
     stats.setUInt(TelemetryData::Key::GPS_TIME, presTime);
-    Serial.print("Wrote date: ");
-    Serial.print(presDate);
-    Serial.print("\r\n");
+    #ifdef DEBUG_BUILD
+      Serial.print("Wrote date: ");
+      Serial.println(presDate);
+    #endif
+  }
+  else
+  {
+    DEBUG("GPS_INVALID_AGE");
   }
 
   gps.f_get_position(&flat, &flon, &fixAge);
-  if(!(flat == TinyGPS::GPS_INVALID_F_ANGLE || flon == TinyGPS::GPS_INVALID_F_ANGLE)) {
+  if(!(flat == TinyGPS::GPS_INVALID_F_ANGLE || flon == TinyGPS::GPS_INVALID_F_ANGLE))
+  {
     stats.setDouble(TelemetryData::Key::GPS_LAT, flat);
     stats.setDouble(TelemetryData::Key::GPS_LON, flon);
-
-    Serial.print("Wrote lon: ");
-    Serial.print(flon);
-    Serial.print("\r\n");
+    #ifdef DEBUG_BUILD
+      Serial.print("Wrote lon: ");
+      Serial.println(flon);
+    #endif
   }
 }
 
