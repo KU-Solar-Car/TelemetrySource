@@ -246,6 +246,6 @@ bool XBee::isShutDown(unsigned timeout)
       return (resp.frameData[4] == 0x2D);
     }
   } while (millis() < myTime+timeout);
-  Serial.println("Connectivity check timed out");
+  Serial.println("Shutdown check timed out");
   return false;
 }

@@ -30,7 +30,7 @@ byte maxTemp;
 
 unsigned long nextTimeWeSendFrame;
 
-// MonitoredSerial mySerial(Serial1, Serial);
+// MonitoredSerial mySerial(Serial2, Serial);
 
 XBee xbee(Serial2);
 GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
@@ -49,6 +49,8 @@ volatile bool shutdownButtonPressed = false;
 
 volatile bool resetButtonMaybePressed = false;
 volatile bool shutdownButtonMaybePressed = false;
+
+volatile bool checkShutdown = false;
 
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
@@ -216,6 +218,7 @@ void serial_commands_interrupt() {
   if (cmd == 's') shutdownButtonPressed = true;
   else if (cmd == 'r') resetButtonPressed = true;
   else if (cmd == 'd') sendStatsSerial(testStats); // DriverHUD requesting data
+  else if (cmd == 'x') checkShutdown = true;
 }
 
 // TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
@@ -242,6 +245,14 @@ void shutdownOnCommand()
     xbee.safeReset(120000);
     resetButtonPressed = false;
     shutdownButtonPressed = false;
+  }
+  else if (checkShutdown)
+  {
+    Serial.println("Checking if XBee is shutdown, please wait up to 1 minute...");
+    bool isShutdown = xbee.isShutDown(60000);
+    if (isShutdown) Serial.println("YES!");
+    else Serial.println("No :(");
+    checkShutdown = false;
   }
 }
 
