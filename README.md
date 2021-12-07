@@ -15,3 +15,9 @@ Arduino system to process and transmit car data. Uses an Arduino Due with the fo
 	* TinyGPS
 	* DueTimer
 * Install the [Arduino-MemoryFree](https://github.com/mpflaga/Arduino-MemoryFree) library manually to %UserProfile%\Documents\Arduino\libraries
+
+# Impotant XBee note
+The XBee modem starts atuomatically upon receiving power and must always be
+shutdown safely before disconnecting power, or else there is risk of permanent
+hardware damage. The green light on the XBee Arduino shield will be blinking
+when the modem is on and solid when the modem is off.
