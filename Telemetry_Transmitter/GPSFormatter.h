@@ -37,7 +37,7 @@ void GPSFormatter::readSerial()
 
 void GPSFormatter::writeToData(volatile TelemetryData& stats)
 {
-  float flat, flon;
+  float flat, flon, fspeed;
   unsigned long presDate, presTime;
   unsigned long fixAge, presAge;
 
@@ -65,6 +65,11 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
       Serial.print("Wrote lon: ");
       Serial.println(flon);
     #endif
+  }
+
+  float s = gps.f_speed_mph();
+  if(!(s == TinyGPS::GPS_INVALID_F_SPEED)) {
+    stats.setDouble(TelemetryData::Key::GPS_SPD, s);
   }
 }
 
