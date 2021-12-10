@@ -28,13 +28,13 @@ class XBee
   bool configure();
   userFrame read(); // Can read one full packet at a time.
   bool shutdownCommandMode();
-  void safeReset(unsigned timeout);
-  void shutdown(unsigned int timeout, bool reboot);
+  bool safeReset(unsigned timeout);
+  bool shutdown(unsigned int timeout, bool reboot);
   void sendFrame(const byte& frameType, const char frameData[], size_t frameDataLen);
   void sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen);
   void sendTCP(IPAddress address, uint16_t destPort, uint16_t sourcePort, uint8_t protocol, uint8_t options, const char payload[], size_t payloadLength);
   bool isShutDown(unsigned timeout);
-  bool isConnected(unsigned);
+  bool isConnected(unsigned timeout);
 };
 
 #endif

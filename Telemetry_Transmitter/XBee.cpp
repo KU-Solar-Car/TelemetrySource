@@ -3,11 +3,12 @@
  * Date: 2020-10-15
  * Description: Implementation of the XBee class
  */
+
 #include "XBee.h"
+#include "debug.h"
 #include "Frames.h"
 #include "IPAddress.h"
 #include <Arduino.h>
-
 
 bool XBee::configure()
 {
@@ -38,14 +39,14 @@ void XBee::sendFrame(const byte& frameType, const char frameData[], size_t frame
   byte len_msb = (uint8_t) (frameLength >> 8);
   byte len_lsb = (uint8_t) frameLength;
 
-  Serial.print("TX: ");
+  DEBUG("[BEGIN XBee Tx]");
   m_serial.write(start);
   m_serial.write(len_msb);
   m_serial.write(len_lsb);
   m_serial.write(frameType);
   m_serial.write(frameData, frameDataLen);
   m_serial.write(checksum);
-  Serial.println("");
+  DEBUG("[END XBee Tx]");
 }
 
 void XBee::sendATCommand(uint8_t frameID, const char command[], const char param[], size_t paramLen)
@@ -58,7 +59,7 @@ void XBee::sendATCommand(uint8_t frameID, const char command[], const char param
   delete[] frameData;
 }
 
-void XBee::safeReset(unsigned timeout)
+bool XBee::safeReset(unsigned timeout)
 {
   if (isShutDown(timeout))
   {
@@ -74,12 +75,13 @@ void XBee::safeReset(unsigned timeout)
   {
     resp = read();
     if (resp.frameType == 0x8A && resp.frameData[0] == 0x02)
-      return;
+      return true;
   } while (millis() < myTime+timeout);
-  Serial.println("Timed out.");
+  DEBUG("XBee: Reset timed out");
+  return false;
 }
 
-void XBee::shutdown(unsigned int timeout, bool reboot)
+bool XBee::shutdown(unsigned int timeout, bool reboot)
 {
   uint8_t param;
   if (reboot)
@@ -97,10 +99,10 @@ void XBee::shutdown(unsigned int timeout, bool reboot)
   {
     response = read();
     if (response.frameType == 0x88 && strncmp(response.frameData+1, "SD", 2) == 0 && response.frameData[3] == 0x00)
-      return;
+      return true;
   } while (millis() < (startTime + timeout));
-  Serial.println("Timed Out.");
-  
+  DEBUG("XBee: Shutdown timed out");
+  return false;
 }
 
 bool XBee::shutdownCommandMode()
@@ -126,17 +128,17 @@ userFrame XBee::read()
   int recvd;
   const unsigned timeout = 3000;
   m_rxBuffer.clear();
-  // Serial.println("Bytes in buffer: " + String(m_serial.available()));
+  // DEBUG("XBee read: Bytes in buffer: " + String(m_serial.available()));
   do
   {
     recvd = m_serial.read();
     if (recvd == -1) 
     {
-      // Serial.println("Start delimiter not found.");
+      // DEBUG("XBee read: Start delimiter not found.");
       return NULL_USER_FRAME; 
     }
   } while (recvd != 0x7E);
-  Serial.println("Got start delimiter 0x7E");
+  DEBUG("XBee read: Got start delimiter 0x7E");
   unsigned long lastRead = millis();
   
   while (m_rxBuffer.bytes_recvd < m_rxBuffer.length())
@@ -144,23 +146,23 @@ userFrame XBee::read()
     int bytes_available = m_serial.available();
     if (bytes_available > 0)
     {
-      // Serial.println("Bytes available: " + String(bytes_available));
+      // DEBUG("XBee read: Bytes available: " + String(bytes_available));
       char ptr[30];
-      // sprintf(ptr, "Writing to address %p", m_rxBuffer.buf+m_rxBuffer.bytes_recvd);
-      // Serial.println(ptr);
+      // sprintf(ptr, "XBee read: Writing to address %p", m_rxBuffer.buf+m_rxBuffer.bytes_recvd);
+      // DEBUG(ptr);
       m_rxBuffer.buf[m_rxBuffer.bytes_recvd] = m_serial.read();
       m_rxBuffer.bytes_recvd++;
       lastRead = millis();
     }
     else if (millis() > lastRead + timeout)
     {
-      Serial.println("Timed out in the middle of receiving a frame.");
+      DEBUG("XBee read: Timed out in the middle of receiving a frame.");
       m_rxBuffer.clear();
       return NULL_USER_FRAME;
     }
   }
-  Serial.println("Available for write: " + String(Serial.availableForWrite()));
-  Serial.println("BEGIN RX");
+  Serial.println("XBee read: Available for write: " + String(Serial.availableForWrite()));
+  Serial.println("[BEGIN XBee Rx]");
   
   char len_str[21];
   sprintf(len_str, "Length: %02X %02X (%d)", m_rxBuffer.buf[0], m_rxBuffer.buf[1], m_rxBuffer.frameLength());
@@ -187,7 +189,7 @@ userFrame XBee::read()
   sprintf(sum_str, "Checksum: %02X", m_rxBuffer.buf[m_rxBuffer.length()-1]);
   Serial.println(sum_str);
 
-  Serial.println("END RX");
+  Serial.println("[END XBee Rx]");
 
   return {m_rxBuffer.frameType(), m_rxBuffer.buf+3, m_rxBuffer.frameDataLength()};
 }
@@ -227,7 +229,7 @@ bool XBee::isConnected(unsigned timeout)
       return (resp.frameData[4] == 0x00);
     }
   } while (millis() < myTime+timeout);
-  Serial.println("Connectivity check timed out");
+  DEBUG("XBee: Connectivity check timed out");
   return false;
 }
 
@@ -246,6 +248,6 @@ bool XBee::isShutDown(unsigned timeout)
       return (resp.frameData[4] == 0x2D);
     }
   } while (millis() < myTime+timeout);
-  Serial.println("Connectivity check timed out");
+  DEBUG("XBee: Shutdown check timed out");
   return false;
 }
