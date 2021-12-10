@@ -37,7 +37,7 @@ void GPSFormatter::readSerial()
 
 void GPSFormatter::writeToData(volatile TelemetryData& stats)
 {
-  float flat, flon, fspeed;
+  float flat, flon, fspeed, fcourse;
   unsigned long presDate, presTime;
   unsigned long fixAge, presAge;
 
@@ -67,9 +67,14 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
     #endif
   }
 
-  float s = gps.f_speed_mph();
+  fspeed = gps.f_speed_mph();
   if(!(s == TinyGPS::GPS_INVALID_F_SPEED)) {
-    stats.setDouble(TelemetryData::Key::GPS_SPD, s);
+    stats.setDouble(TelemetryData::Key::GPS_SPD, fspeed);
+  }
+
+  fcourse = gps.f_course();
+  if(!(fcourse == TinyGPS::GPS_INVALID_ANGLE)) {
+    stats.setDouble(TelemetryData::Key::GPS_COURSE, fcourse);
   }
 }
 
