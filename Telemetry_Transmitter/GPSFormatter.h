@@ -35,20 +35,11 @@ void GPSFormatter::readSerial() {
 void GPSFormatter::writeToData(volatile TelemetryData& stats) {
   
   // Variables in question.
-  float flat, flon;
+  float flat, flon, fspeed;
   unsigned long presDate, presTime;
   unsigned long fixAge, presAge;
 
   gps.get_datetime(&presDate, &presTime, &presAge);
-  /*
-  Serial.print("Date: ");
-  Serial.print(presDate);
-  Serial.print('\n');
-  Serial.print("Time: ");
-  Serial.print(presTime);
-  Serial.print('\n');
-  */
-  
   if (!(presAge == TinyGPS::GPS_INVALID_AGE)) {
     stats.setUInt(TelemetryData::Key::GPS_DATE, presDate);
     stats.setUInt(TelemetryData::Key::GPS_TIME, presTime);
@@ -58,6 +49,11 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats) {
   if(!(flat == TinyGPS::GPS_INVALID_F_ANGLE || flon == TinyGPS::GPS_INVALID_F_ANGLE)) {
     stats.setDouble(TelemetryData::Key::GPS_LAT, flat);
     stats.setDouble(TelemetryData::Key::GPS_LON, flon);
+  }
+
+  float s = gps.f_speed_mps();
+  if(!(s == TinyGPS::GPS_INVALID_F_SPEED)) {
+    stats.setDouble(TelemetryData::Key::GPS_SPD, s);
   }
 }
 
