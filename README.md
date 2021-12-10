@@ -19,5 +19,5 @@ Arduino system to process and transmit car data. Uses an Arduino Due with the fo
 # Impotant XBee note
 The XBee modem starts atuomatically upon receiving power and must always be
 shutdown safely before disconnecting power, or else there is risk of permanent
-hardware damage. The green light on the XBee Arduino shield will be blinking
-when the modem is on and solid when the modem is off.
+hardware damage. The green DI05 light on the XBee Arduino shield will be 
+blinking when the modem is on and solid when the modem is off.

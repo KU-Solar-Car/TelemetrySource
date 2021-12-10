@@ -1,12 +1,4 @@
-#define DEBUG_BUILD // Remove when using with DriverHUD
-
-// Debug print macro. Do while loop ensures a semicolon is used.
-#ifdef DEBUG_BUILD
-  #define DEBUG(x) do { Serial.println(x); } while (0)
-#else
-  #define DEBUG(x) do {} while (0)
-#endif
-
+#include "debug.h"
 #include "DueCANLayer.h"
 #include "XBee.h"
 #include "MonitoredSerial.h"
@@ -37,7 +29,7 @@ GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
 const size_t DATA_BUFFER_SIZE = 550;
 char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
-char serialDataBuffer[DATA_BUFFER_SIZE]; // Buffer for DriverHUD data (this is separate because of interrupts)
+char serialDataBuffer[DATA_BUFFER_SIZE]; // Buffer for DriverHUD data (this is separate because of interrupts, can be removed later)
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -91,12 +83,12 @@ void setup()
    * Wait for modem to associate before starting 
    * =================================*/
   userFrame status;
-//  DEBUG("Waiting for network to associate...");
-//  do
-//  {
-//    status = xbee.read();
-//  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
-//  DEBUG("XBee: Network associated.");
+  DEBUG("XBee: Waiting for network to associate...");
+  do
+  {
+    status = xbee.read();
+  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
+  DEBUG("XBee: Network associated.");
   
   /* =================================
    * Initialize variables that track stuff
@@ -116,7 +108,8 @@ void setup()
   Timer1.attachInterrupt(reset_interrupt);
 
   // Check for commands from the DriverHUD frequently, even if doing something else
-  Timer2.attachInterrupt(serial_commands_interrupt).setPeriod(DRIVERHUD_CHECK_INTERVAL*1000).start();
+  // Reading from serial in an interrupt like this is not a good idea
+  //Timer2.attachInterrupt(checkSerialCommands).setPeriod(DRIVERHUD_CHECK_INTERVAL*1000).start();
 }
 
 void loop()
@@ -140,6 +133,7 @@ void loop()
   */
 
   // Check for serial commands and shutdown/reset buttons
+  checkSerialCommands();
   shutdownOnCommand();
 }
 
@@ -196,24 +190,7 @@ void randomizeData()
   }
 }
 
-void printReceivedFrame()
-{
-  userFrame recvd = xbee.read();
-  if (!(recvd == NULL_USER_FRAME))
-  {
-    #ifdef DEBUG_BUILD
-      Serial.println("Got frame:");
-      Serial.println("Frame type: " + String(recvd.frameType, HEX));
-      Serial.print("Frame data: ");
-      Serial.write(recvd.frameData, recvd.frameDataLength);
-      Serial.println("");
-    #endif
-  }
-  // else
-    // DEBUG("Got here nothing :(");
-}
-
-void serial_commands_interrupt() {
+void checkSerialCommands() {
   char cmd = Serial.read();
   if (cmd == 's') shutdownButtonPressed = true;
   else if (cmd == 'r') resetButtonPressed = true;
@@ -248,8 +225,8 @@ void shutdownOnCommand()
   }
   else if (checkShutdown)
   {
-    Serial.println("Checking if XBee is shutdown, please wait up to 1 minute...");
-    bool isShutdown = xbee.isShutDown(60000);
+    Serial.println("Checking if XBee is shutdown, please wait up to 5 seconds...");
+    bool isShutdown = xbee.isShutDown(5000);
     if (isShutdown) Serial.println("YES!");
     else Serial.println("No :(");
     checkShutdown = false;
@@ -323,8 +300,8 @@ void sendStats(volatile TelemetryData& stats)
   strcat(requestBuffer, "\r\n\r\n");
   strcat(requestBuffer, dataBuffer);
   
-  //xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   DEBUG(requestBuffer);
+  xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
 }
 
 // Send stats to DriverHUD over serial
@@ -400,3 +377,20 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
 //  xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 //}
+
+void printReceivedFrame()
+{
+  userFrame recvd = xbee.read();
+  if (!(recvd == NULL_USER_FRAME))
+  {
+    #ifdef DEBUG_BUILD
+      Serial.println("[BEGIN XBee frame]:");
+      Serial.println("Frame type: " + String(recvd.frameType, HEX));
+      Serial.print("Frame data: ");
+      Serial.write(recvd.frameData, recvd.frameDataLength);
+      Serial.println("[END XBee frame]");
+    #endif
+  }
+  // else
+    // DEBUG("Got here nothing :(");
+}
