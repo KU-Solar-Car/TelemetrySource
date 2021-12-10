@@ -9,7 +9,8 @@ struct TelemetryData
     BATT_CURRENT,
     BATT_TEMP,
     BMS_FAULT,
-    GPS_TIME,
+    GPS_TIME, // Format hhmmsscc
+    GPS_DATE, // Format ddmmyy
     GPS_LAT,
     GPS_LON,
     GPS_VEL_EAST,

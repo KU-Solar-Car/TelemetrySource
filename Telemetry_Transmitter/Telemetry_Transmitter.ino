@@ -4,16 +4,20 @@
 #include "Stats.h"
 #include "IPAddress.h"
 #include "Frames.h"
-#include <MemoryFree.h>
+#include "GPSFormatter.h"
+#include <MemoryFree.h>   // https://github.com/mpflaga/Arduino-MemoryFree
 #include <pgmStrToRAM.h>
-#include <DueTimer.h>
+#include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
 
 const byte BYTE_MIN = -128;
 byte maxTemp;
 
 unsigned long nextTimeWeSendFrame;
+
 // MonitoredSerial mySerial(Serial1, Serial);
+
 XBee xbee(Serial2);
+GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -35,8 +39,9 @@ void setup()
 {
   // Set the serial interface baud rate
   Serial.begin(115200);
-  Serial2.begin(9600);
-
+  Serial2.begin(9600); // Interface with xbee.
+  Serial1.begin(4800); // Interface with GPS.
+  
   // Suppress the serial
   // mySerial.suppress();
 
@@ -95,7 +100,20 @@ void loop()
 {
   // sendMaxTempEveryFiveSeconds();
   // setMaxTemp();
-  sendStatsPeriodically(1000);
+
+  gpsFormatter.readSerial();
+  gpsFormatter.writeToData(testStats);
+
+  // sendStatsPeriodically(1000);
+  sendStats(testStats);
+
+  /*
+  unsigned long myTime = millis();
+  while(myTime + 2000 > millis()) {
+    continue;
+  }
+  */
+  
   shutdownOnCommand();
 }
 
@@ -255,10 +273,11 @@ void sendStats(volatile TelemetryData& stats)
   }
   setContentLengthHeader(requestBuffer, bodyLength);
 
-  xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
+  // xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
   Serial.println(requestBuffer);
 
   // strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
+  
   // xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 }
 
@@ -270,7 +289,8 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
     case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":%u", data.getUInt(key)); break;
+    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":\"%08u\"", data.getUInt(key)); break;
+    case TelemetryData::Key::GPS_DATE: return sprintf(dest, "\"gps_date\":\"%06u\"", data.getUInt(key)); break;
     case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
     case TelemetryData::Key::GPS_VEL_EAST: return sprintf(dest, "\"gps_velocity_east\":%6f", data.getDouble(key)); break;
@@ -283,6 +303,7 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
   }
 }
 
+// TODO: implement rest of these?
 void CANCallback(CAN_FRAME* frame)
 {
   // if msg id == 0x6B1, let maxTempCallBack handle it
