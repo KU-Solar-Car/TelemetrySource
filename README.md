@@ -21,3 +21,19 @@ The XBee modem starts atuomatically upon receiving power and must always be
 shutdown safely before disconnecting power, or else there is risk of permanent
 hardware damage. The green DI05 light on the XBee Arduino shield will be 
 blinking when the modem is on and solid when the modem is off.
+
+# Transmitted data
+| Field					| Unit/Format	|
+| ---					| ---			|
+| Battery Voltage		| ?				|
+| Battery Current		| ?				|
+| Battery Temperature	| ?				|
+| BMS Fault				| Boolean		|
+| GPS Course			| Degrees		|
+| GPS Time				| hhmmsscc		|
+| GPS Date				| ddmmyy		|
+| GPS Lat, Lon			| Degrees		|
+| GPS Speed				| MPH			|
+| Solar Voltage			| ?				|
+| Solar Current			| ?				|
+| Motor Speed			| ? 			|

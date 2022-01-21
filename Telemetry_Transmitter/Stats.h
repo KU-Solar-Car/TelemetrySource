@@ -9,7 +9,7 @@ struct TelemetryData
     BATT_CURRENT,
     BATT_TEMP,
     BMS_FAULT,
-    GPS_COURSE,
+    GPS_COURSE, // Degrees
     GPS_TIME, // Format hhmmsscc
     GPS_DATE, // Format ddmmyy
     GPS_LAT,
@@ -17,7 +17,7 @@ struct TelemetryData
     GPS_VEL_EAST,
     GPS_VEL_NOR,
     GPS_VEL_UP,
-    GPS_SPD,
+    GPS_SPD, // MPH
     SOLAR_VOLTAGE,
     SOLAR_CURRENT,
     MOTOR_SPD,
