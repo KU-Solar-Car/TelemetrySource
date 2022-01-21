@@ -135,7 +135,7 @@ userFrame XBee::read()
     if (recvd == -1) 
     {
       // DEBUG("XBee read: Start delimiter not found.");
-      return NULL_USER_FRAME; 
+      return NULL_USER_FRAME;
     }
   } while (recvd != 0x7E);
   DEBUG("XBee read: Got start delimiter 0x7E");

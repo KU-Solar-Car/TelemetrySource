@@ -47,7 +47,7 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
     stats.setUInt(TelemetryData::Key::GPS_DATE, presDate);
     stats.setUInt(TelemetryData::Key::GPS_TIME, presTime);
     #ifdef DEBUG_BUILD
-      Serial.print("Wrote date: ");
+      Serial.print("GPS wrote date: ");
       Serial.println(presDate);
     #endif
   }
@@ -62,7 +62,7 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
     stats.setDouble(TelemetryData::Key::GPS_LAT, flat);
     stats.setDouble(TelemetryData::Key::GPS_LON, flon);
     #ifdef DEBUG_BUILD
-      Serial.print("Wrote lon: ");
+      Serial.print("GPS wrote lon: ");
       Serial.println(flon);
     #endif
   }

@@ -29,7 +29,6 @@ GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
 const size_t DATA_BUFFER_SIZE = 550;
 char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
-char serialDataBuffer[DATA_BUFFER_SIZE]; // Buffer for DriverHUD data (this is separate because of interrupts, can be removed later)
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -83,11 +82,11 @@ void setup()
    * Wait for modem to associate before starting 
    * =================================*/
   userFrame status;
-  DEBUG("XBee: Waiting for network to associate...");
+  DEBUG("XBee: Waiting for network to associate. Send \"!\" to skip.");
   do
   {
     status = xbee.read();
-  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
+  } while(!(status.frameType == 0x8A && status.frameData[0] == 2) && Serial.read() != '!');
   DEBUG("XBee: Network associated.");
   
   /* =================================
@@ -107,11 +106,12 @@ void setup()
   Timer0.attachInterrupt(shutdown_interrupt);
   Timer1.attachInterrupt(reset_interrupt);
 
-  // Check for commands from the DriverHUD frequently, even if doing something else
-  // Reading from serial in an interrupt like this is not a good idea
-  //Timer2.attachInterrupt(checkSerialCommands).setPeriod(DRIVERHUD_CHECK_INTERVAL*1000).start();
+  // Maybe this should be Pi-readable format
+  DEBUG("Setup complete");
 }
 
+// loop should be kept <20 ms during normal operation to ensure DriverHUD can regularly receive data
+// It is ok for shutdown and initialization to take longer
 void loop()
 {
   // Read most data from CAN bus
@@ -300,15 +300,17 @@ void sendStats(volatile TelemetryData& stats)
   strcat(requestBuffer, "\r\n\r\n");
   strcat(requestBuffer, dataBuffer);
   
-  DEBUG(requestBuffer);
+  DEBUG(dataBuffer);
+  // DEBUG(requestBuffer);
   xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
 }
 
 // Send stats to DriverHUD over serial
 void sendStatsSerial(volatile TelemetryData& stats)
 {
-  fillDataBuffer(serialDataBuffer, stats);
-  Serial.println(serialDataBuffer);
+  DEBUG("sendStatsSerial");
+  fillDataBuffer(dataBuffer, stats);
+  Serial.println(dataBuffer);
 }
 
 int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
