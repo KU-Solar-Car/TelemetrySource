@@ -47,6 +47,7 @@ const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
 const unsigned BUTTON_DEBOUNCE_MICROS = 10000;
 
+// Setup and loop =============================================================
 
 void setup()
 {
@@ -137,17 +138,23 @@ void loop()
   shutdownOnCommand();
 }
 
+// Shutdown and reset button interrupts =======================================
+
 void shutdown_interrupt()
 {
   if (digitalRead(digitalPinToInterrupt(SHUTDOWN_PIN)) == LOW)
+  {
     shutdownButtonPressed = true;
+  }
   shutdownButtonMaybePressed = false;
   Timer0.stop();
 }
 void reset_interrupt()
 {
   if (digitalRead(digitalPinToInterrupt(RESET_PIN)) == LOW)
+  {
     resetButtonPressed = true;
+  }
   resetButtonMaybePressed = false;
   Timer1.stop();
 }
@@ -156,39 +163,21 @@ void shutdown_debounce_interrupt()
 {
   // first, check that we're not already debouncing.
   if (!shutdownButtonMaybePressed)
+  {
     shutdownButtonMaybePressed = true;
     Timer0.start(BUTTON_DEBOUNCE_MICROS);
+  }
 }
 void reset_debounce_interrupt()
 {
   if (!resetButtonMaybePressed)
+  {
     resetButtonMaybePressed = true;
     Timer1.start(BUTTON_DEBOUNCE_MICROS);
-}
-
-void randomizeData()
-{
-   /* =================================
-   * Set TelemetryData
-   * =================================*/
-
-  for(int i = 0; i < TelemetryData::Key::_LAST; i++)
-  {
-    
-    if(i == TelemetryData::Key::BMS_FAULT)
-    {
-      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
-    }
-    else if(i == TelemetryData::Key::GPS_TIME)
-    {
-      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
-    }
-    else
-    {
-      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
-    }
   }
 }
+
+// Run commands ===============================================================
 
 void checkSerialCommands() {
   char cmd = Serial.read();
@@ -205,13 +194,19 @@ void shutdownOnCommand()
   {
     Serial.println("Shutting down, please wait up to 2 minutes...");
     if (Serial.read() != 'c')
+    {
       xbee.shutdown(120000, false);
+    }
     else
     {
       if (xbee.shutdownCommandMode())
+      {
         Serial.println("Shutdown successful");
+      }
       else
+      {
         Serial.println("Shutdown failed");
+      }
     }
     shutdownButtonPressed = false;
     resetButtonPressed = false;
@@ -233,6 +228,8 @@ void shutdownOnCommand()
   }
 }
 
+// Format and send telemtry data ==============================================
+
 void sendStatsPeriodically(int period)
 {
   unsigned long myTime = millis();
@@ -253,14 +250,19 @@ void sendStatsPeriodically(int period)
         resp = xbee.read();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
       if (resp.frameType != 0xB0)
+      {
         DEBUG("Request timed out.");
+      }
     }
     else
+    {
       DEBUG("Modem is not connected, skipping this time.");
+    }
     DEBUG("");
   }
 }
 
+// Create a JSON string containing the latest sensor values from stats and store it in buf
 int fillDataBuffer(char buf[], volatile TelemetryData& stats)
 {
   strcpy(buf, "{");
@@ -277,7 +279,9 @@ int fillDataBuffer(char buf[], volatile TelemetryData& stats)
   // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
   // If not, we need to append a }, and also add 1 to the content length.
   if (buf[strlen(buf)-1] == ',')
+  {
     buf[strlen(buf)-1] = '}';
+  }
   else if (buf[strlen(buf)-1] == '{')
   {
     strcat(buf, "}");
@@ -335,6 +339,8 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
   }
 }
 
+// Read data from CAN bus =====================================================
+
 // TODO: implement rest of these?
 void CANCallback(CAN_FRAME* frame)
 {
@@ -355,6 +361,27 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
   }
 }
 
+// For testing, set some sensors to random values
+void randomizeData()
+{
+  for (int i = 0; i < TelemetryData::Key::_LAST; i++)
+  {
+    
+    if (i == TelemetryData::Key::BMS_FAULT)
+    {
+      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
+    }
+    else if (i == TelemetryData::Key::GPS_TIME)
+    {
+      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
+    }
+    else
+    {
+      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
+    }
+  }
+}
+
 /* =================================
  * Temporarily not being used
  * =================================*/
@@ -365,7 +392,7 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  bool bExtendedFormat;
 //  byte cRxData[8];
 //  byte cDataLen;
-//  if(canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
+//  if (canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
 //  {
 //    if (lMsgID == 0x6B1) {
 //      if (cRxData[4] > testStats.getDouble(TelemetryData::Key::BATT_TEMP))
