@@ -16,13 +16,19 @@ bool XBee::configure()
   delay(1500);
   String ok = m_serial.readStringUntil('\r');
   if (ok != "OK")
+  {
+    DEBUG("[XBee] Config fail point 1: " + ok);
     return false;
+  }
   m_serial.write("ATAP 1\r");
   delay(2000);
   ok = "";
   ok = m_serial.readStringUntil('\r');
   if (ok != "OK")
+  {
+    DEBUG("[XBee] Config fail point 2: " + ok);
     return false;
+  }
   m_serial.write("CN\r");
   return true;
 }
