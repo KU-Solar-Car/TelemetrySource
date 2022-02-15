@@ -67,7 +67,7 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
   }
 
   fspeed = gps.f_speed_mph();
-  if(!(s == TinyGPS::GPS_INVALID_F_SPEED)) {
+  if(!(fspeed == TinyGPS::GPS_INVALID_F_SPEED)) {
     stats.setDouble(TelemetryData::Key::GPS_SPD, fspeed);
   }
 
