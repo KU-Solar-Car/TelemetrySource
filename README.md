@@ -14,6 +14,7 @@ Arduino system to process and transmit car data. Uses an Arduino Due with the fo
 * Install the following libraries using Arduino IDE library manager:
 	* TinyGPS
 	* DueTimer
+	* Scheduler
 * Install the [Arduino-MemoryFree](https://github.com/mpflaga/Arduino-MemoryFree) library manually to %UserProfile%\Documents\Arduino\libraries
 
 # Impotant XBee note

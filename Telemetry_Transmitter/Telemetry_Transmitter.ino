@@ -9,7 +9,8 @@
 #include "auth_key.h"
 #include <MemoryFree.h>   // https://github.com/mpflaga/Arduino-MemoryFree
 #include <pgmStrToRAM.h>
-#include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
+#include <DueTimer.h>
+#include <Scheduler.h>
 
 // Number of milliseconds to wait between transmitting data packets
 const int XBEE_TX_INTERVAL = 2000;
@@ -85,6 +86,7 @@ void setup()
    * =================================*/
   userFrame status;
   // TODO: This doesn't seem reliable. Maybe use isConnected
+  // Could also move this to xbeeLoop so other tasks don't wait for it
   DEBUG("XBee: Waiting for network to associate. Send \"!\" to skip.");
   do
   {
@@ -110,42 +112,53 @@ void setup()
   Timer0.attachInterrupt(shutdown_interrupt);
   Timer1.attachInterrupt(reset_interrupt);
 
+  // Setup multiple loops for the hardware scheduler to run
+  // If a loop is doing something that takes a long time (e.g. busy waiting
+  // or serial with long timeout), it should call yield() on a regular basis
+  // to allow other loops to run. The built-in delay function works as well.
+  Scheduler.startLoop(xbeeLoop);
+  Scheduler.startLoop(gpsLoop);
+  Scheduler.startLoop(commandLoop);
+
   // Maybe this should be Pi-readable format
   DEBUG("Setup complete");
 }
 
-// loop should be kept <20 ms during normal operation to ensure DriverHUD can regularly receive data
-// It is ok for shutdown and initialization to take longer
+// Separate loops for different tasks =========================================
+
+// CAN data loop
 void loop()
 {
   // Read most data from CAN bus
   // setMaxTemp();
+  yield();
+}
 
-  // Read GPS values
-  gpsFormatter.readSerial(10); // Testing 10ms delay - used to be 2000ms
-  gpsFormatter.writeToData(testStats);
-
-  // This function calls xbee.isConnected and xbee.read which are long blocking
-  // calls, so it is currently not used to keep latency low for the DriverHUD
-  // sendStatsPeriodically(XBEE_TX_INTERVAL);
+void xbeeLoop() {
+  sendStatsPeriodically(XBEE_TX_INTERVAL);
 
   // Send stats to the XBee
-  if (millis() >= nextTimeWeSendFrame)
+  /*if (millis() >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame += XBEE_TX_INTERVAL;
     sendStats(testStats);
-  }
+  }*/
+  yield();
+}
 
-  /*
-  unsigned long myTime = millis();
-  while(myTime + XBEE_TX_INTERVAL > millis()) {
-    continue;
-  }
-  */
+void gpsLoop() {
+  DEBUG("GPS loop");
+  // Read GPS values
+  gpsFormatter.readSerial(2000);
+  gpsFormatter.writeToData(testStats);
+  yield();
+}
 
+void commandLoop() {
   // Check for serial commands and shutdown/reset buttons
   checkSerialCommands();
   shutdownOnCommand();
+  yield();
 }
 
 // Shutdown and reset button interrupts =======================================
