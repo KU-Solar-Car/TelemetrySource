@@ -72,7 +72,7 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
   }
 
   fcourse = gps.f_course();
-  if(!(fcourse == TinyGPS::GPS_INVALID_ANGLE)) {
+  if(!(fcourse == TinyGPS::GPS_INVALID_F_ANGLE)) {
     stats.setDouble(TelemetryData::Key::GPS_COURSE, fcourse);
   }
 }
