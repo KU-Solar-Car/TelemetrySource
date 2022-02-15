@@ -14,22 +14,21 @@
 // Number of milliseconds to wait between transmitting data packets
 const int XBEE_TX_INTERVAL = 2000;
 
-// Number of milliseconds to wait between checking for commands from DriverHUD
-const int DRIVERHUD_CHECK_INTERVAL = 33; // 30 fps
-
 const byte BYTE_MIN = -128;
 byte maxTemp;
 
 unsigned long nextTimeWeSendFrame;
 
-// MonitoredSerial mySerial(Serial2, Serial);
+// Monitored serial for debugging XBee
+//MonitoredSerial mySerial(Serial2, Serial);
+//XBee xbee(mySerial);
 
 XBee xbee(Serial2);
+
 GPSFormatter gpsFormatter(&Serial1); // 19rx, 18tx
 
 const size_t DATA_BUFFER_SIZE = 550;
 char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
-char serialDataBuffer[DATA_BUFFER_SIZE]; // Buffer for DriverHUD data (this is separate because of interrupts, can be removed later)
 
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
@@ -43,11 +42,13 @@ volatile bool resetButtonMaybePressed = false;
 volatile bool shutdownButtonMaybePressed = false;
 
 volatile bool checkShutdown = false;
+volatile bool checkConnected = false;
 
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
 const unsigned BUTTON_DEBOUNCE_MICROS = 10000;
 
+// Setup and loop =============================================================
 
 void setup()
 {
@@ -55,40 +56,42 @@ void setup()
   Serial2.begin(9600); // Interface with XBee
   Serial1.begin(4800); // Interface with GPS
   
-  // Suppress the serial
-  // mySerial.suppress();
-
-  /* --------------------------------
-   * Set the XBee in API Mode
-   * =================================*/
-  if(xbee.configure())
-    DEBUG("XBee: Configuration successful");
-  else
-    DEBUG("XBee: Configuration failed");
-    
   /* =================================
    * Initialize CAN board
    * =================================*/
   if(canInit(0, CAN_BPS_250K) == CAN_OK)
-    DEBUG("CAN0: Initialized Successfully.\n\r");
+    DEBUG("CAN0: Initialized successfully");
   else
-    DEBUG("CAN0: Initialization Failed.\n\r");
+    DEBUG("CAN0: Initialization failed");
 
   /* =================================
    * Set the CAN interrupt
    * =================================*/
    Can0.setGeneralCallback(CANCallback);
+
+  // Suppress the serial monitoring
+  // mySerial.suppress();
+
+  /* =================================
+   * Set the XBee in API Mode
+   * =================================*/
+  if(xbee.configure())
+    DEBUG("XBee: Configuration successful");
+  else
+    DEBUG("XBee: Configuration failed"); // This happens sometimes - maybe should do multiple attempts
    
   /* =================================
    * Wait for modem to associate before starting 
    * =================================*/
   userFrame status;
-  DEBUG("XBee: Waiting for network to associate...");
+  // TODO: This doesn't seem reliable. Maybe use isConnected
+  DEBUG("XBee: Waiting for network to associate. Send \"!\" to skip.");
   do
   {
     status = xbee.read();
-  } while(!(status.frameType == 0x8A && status.frameData[0] == 2));
-  DEBUG("XBee: Network associated.");
+    printReceivedFrame(status);
+  } while(!(status.frameType == 0x8A && status.frameData[0] == 2) && Serial.read() != '!');
+  DEBUG("XBee: Network associated");
   
   /* =================================
    * Initialize variables that track stuff
@@ -107,23 +110,31 @@ void setup()
   Timer0.attachInterrupt(shutdown_interrupt);
   Timer1.attachInterrupt(reset_interrupt);
 
-  // Check for commands from the DriverHUD frequently, even if doing something else
-  // Reading from serial in an interrupt like this is not a good idea
-  //Timer2.attachInterrupt(checkSerialCommands).setPeriod(DRIVERHUD_CHECK_INTERVAL*1000).start();
+  // Maybe this should be Pi-readable format
+  DEBUG("Setup complete");
 }
 
+// loop should be kept <20 ms during normal operation to ensure DriverHUD can regularly receive data
+// It is ok for shutdown and initialization to take longer
 void loop()
 {
   // Read most data from CAN bus
   // setMaxTemp();
 
   // Read GPS values
-  gpsFormatter.readSerial();
+  gpsFormatter.readSerial(10); // Testing 10ms delay - used to be 2000ms
   gpsFormatter.writeToData(testStats);
 
-  // Send stats to XBee and DriverHUD
+  // This function calls xbee.isConnected and xbee.read which are long blocking
+  // calls, so it is currently not used to keep latency low for the DriverHUD
   // sendStatsPeriodically(XBEE_TX_INTERVAL);
-  sendStats(testStats);
+
+  // Send stats to the XBee
+  if (millis() >= nextTimeWeSendFrame)
+  {
+    nextTimeWeSendFrame += XBEE_TX_INTERVAL;
+    sendStats(testStats);
+  }
 
   /*
   unsigned long myTime = millis();
@@ -137,17 +148,23 @@ void loop()
   shutdownOnCommand();
 }
 
+// Shutdown and reset button interrupts =======================================
+
 void shutdown_interrupt()
 {
   if (digitalRead(digitalPinToInterrupt(SHUTDOWN_PIN)) == LOW)
+  {
     shutdownButtonPressed = true;
+  }
   shutdownButtonMaybePressed = false;
   Timer0.stop();
 }
 void reset_interrupt()
 {
   if (digitalRead(digitalPinToInterrupt(RESET_PIN)) == LOW)
+  {
     resetButtonPressed = true;
+  }
   resetButtonMaybePressed = false;
   Timer1.stop();
 }
@@ -156,39 +173,21 @@ void shutdown_debounce_interrupt()
 {
   // first, check that we're not already debouncing.
   if (!shutdownButtonMaybePressed)
+  {
     shutdownButtonMaybePressed = true;
     Timer0.start(BUTTON_DEBOUNCE_MICROS);
+  }
 }
 void reset_debounce_interrupt()
 {
   if (!resetButtonMaybePressed)
+  {
     resetButtonMaybePressed = true;
     Timer1.start(BUTTON_DEBOUNCE_MICROS);
-}
-
-void randomizeData()
-{
-   /* =================================
-   * Set TelemetryData
-   * =================================*/
-
-  for(int i = 0; i < TelemetryData::Key::_LAST; i++)
-  {
-    
-    if(i == TelemetryData::Key::BMS_FAULT)
-    {
-      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max :(
-    }
-    else if(i == TelemetryData::Key::GPS_TIME)
-    {
-      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
-    }
-    else
-    {
-      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
-    }
   }
 }
+
+// Run commands ===============================================================
 
 void checkSerialCommands() {
   char cmd = Serial.read();
@@ -196,6 +195,7 @@ void checkSerialCommands() {
   else if (cmd == 'r') resetButtonPressed = true;
   else if (cmd == 'd') sendStatsSerial(testStats); // DriverHUD requesting data
   else if (cmd == 'x') checkShutdown = true;
+  else if (cmd == '?') checkConnected = true;
 }
 
 // TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
@@ -205,13 +205,19 @@ void shutdownOnCommand()
   {
     Serial.println("Shutting down, please wait up to 2 minutes...");
     if (Serial.read() != 'c')
+    {
       xbee.shutdown(120000, false);
+    }
     else
     {
       if (xbee.shutdownCommandMode())
+      {
         Serial.println("Shutdown successful");
+      }
       else
+      {
         Serial.println("Shutdown failed");
+      }
     }
     shutdownButtonPressed = false;
     resetButtonPressed = false;
@@ -227,11 +233,21 @@ void shutdownOnCommand()
   {
     Serial.println("Checking if XBee is shutdown, please wait up to 5 seconds...");
     bool isShutdown = xbee.isShutDown(5000);
-    if (isShutdown) Serial.println("YES!");
-    else Serial.println("No :(");
+    if (isShutdown) Serial.println("isShutDown: YES!");
+    else Serial.println("isShutDown: No :(");
     checkShutdown = false;
   }
+  else if (checkConnected)
+  {
+    Serial.println("Checking if XBee is connected, please wait up to 5 seconds...");
+    bool isConnected = xbee.isConnected(5000);
+    if (isConnected) Serial.println("isConnected: YES!");
+    else Serial.println("isConnected: No :(");
+    checkConnected = false;
+  }
 }
+
+// Format and send telemetry data =============================================
 
 void sendStatsPeriodically(int period)
 {
@@ -253,14 +269,19 @@ void sendStatsPeriodically(int period)
         resp = xbee.read();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
       if (resp.frameType != 0xB0)
+      {
         DEBUG("Request timed out.");
+      }
     }
     else
+    {
       DEBUG("Modem is not connected, skipping this time.");
+    }
     DEBUG("");
   }
 }
 
+// Create a JSON string containing the latest sensor values from stats and store it in buf
 int fillDataBuffer(char buf[], volatile TelemetryData& stats)
 {
   strcpy(buf, "{");
@@ -277,7 +298,9 @@ int fillDataBuffer(char buf[], volatile TelemetryData& stats)
   // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
   // If not, we need to append a }, and also add 1 to the content length.
   if (buf[strlen(buf)-1] == ',')
+  {
     buf[strlen(buf)-1] = '}';
+  }
   else if (buf[strlen(buf)-1] == '{')
   {
     strcat(buf, "}");
@@ -289,6 +312,7 @@ int fillDataBuffer(char buf[], volatile TelemetryData& stats)
 // Send stats to the cloud via Xbee
 void sendStats(volatile TelemetryData& stats)
 {
+  DEBUG("sendStats");
   int bodyLength = fillDataBuffer(dataBuffer, stats);
   char bodyLengthStr[4]; 
   sprintf(bodyLengthStr, "%03u", bodyLength);
@@ -300,15 +324,17 @@ void sendStats(volatile TelemetryData& stats)
   strcat(requestBuffer, "\r\n\r\n");
   strcat(requestBuffer, dataBuffer);
   
-  DEBUG(requestBuffer);
+  DEBUG(dataBuffer);
+  // DEBUG(requestBuffer);
   xbee.sendTCP(IPAddress(142, 250, 190, 84), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
 }
 
 // Send stats to DriverHUD over serial
 void sendStatsSerial(volatile TelemetryData& stats)
 {
-  fillDataBuffer(serialDataBuffer, stats);
-  Serial.println(serialDataBuffer);
+  DEBUG("sendStatsSerial");
+  fillDataBuffer(dataBuffer, stats);
+  Serial.println(dataBuffer);
 }
 
 int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
@@ -334,6 +360,8 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
   }
 }
 
+// Read data from CAN bus =====================================================
+
 // TODO: implement rest of these?
 void CANCallback(CAN_FRAME* frame)
 {
@@ -354,6 +382,27 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
   }
 }
 
+// For testing, set some sensors to random values
+void randomizeData()
+{
+  for (int i = 0; i < TelemetryData::Key::_LAST; i++)
+  {
+    
+    if (i == TelemetryData::Key::BMS_FAULT)
+    {
+      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max
+    }
+    else if (i == TelemetryData::Key::GPS_TIME)
+    {
+      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
+    }
+    else
+    {
+      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
+    }
+  }
+}
+
 /* =================================
  * Temporarily not being used
  * =================================*/
@@ -364,7 +413,7 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  bool bExtendedFormat;
 //  byte cRxData[8];
 //  byte cDataLen;
-//  if(canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
+//  if (canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
 //  {
 //    if (lMsgID == 0x6B1) {
 //      if (cRxData[4] > testStats.getDouble(TelemetryData::Key::BATT_TEMP))
@@ -379,9 +428,8 @@ void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 //  xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
 //}
 
-void printReceivedFrame()
+void printReceivedFrame(userFrame& recvd)
 {
-  userFrame recvd = xbee.read();
   if (!(recvd == NULL_USER_FRAME))
   {
     #ifdef DEBUG_BUILD
