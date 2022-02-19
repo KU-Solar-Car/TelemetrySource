@@ -23,17 +23,27 @@ hardware damage. The green DI05 light on the XBee Arduino shield will be
 blinking when the modem is on and solid when the modem is off.
 
 # Transmitted data
-| Field					| Unit/Format	|
-| ---					| ---			|
-| Battery Voltage		| ?				|
-| Battery Current		| ?				|
-| Battery Temperature	| ?				|
-| BMS Fault				| Boolean		|
-| GPS Course			| Degrees		|
-| GPS Time				| hhmmsscc		|
-| GPS Date				| ddmmyy		|
-| GPS Lat, Lon			| Degrees		|
-| GPS Speed				| MPH			|
-| Solar Voltage			| ?				|
-| Solar Current			| ?				|
-| Motor Speed			| ? 			|
+| Field							| Unit			| Format		|
+| ---							| ---			| ---			|
+| Battery Voltage 				| Volts			| Float			|
+| Battery Current				| Amps			| Float			|
+| Battery Temperature			| Celsius		| Float			|
+| Pack Charge					| %				| Unsigned Int	|
+| BMS Fault						| N/A			| Bool			|
+| GPS Course					| Degrees		| Float			|
+| GPS Time						| N/A			| hhmmsscc		|
+| GPS Date						| N/A			| ddmmyy		|
+| GPS Latitude					| Degrees		| Float			|
+| GPS Longitude					| Degrees		| Float			|
+| GPS Speed						| MPH			| Float			|
+| Solar Voltage					| ?				| ?				|
+| Solar Current					| ?				| ?				|
+| Motor Speed					| ? 			| ?				|
+
+# Orion BMS Fields Reference
+| Field							| BMS Field Name				| Default PID	|
+| ---							| ---							| ---			|
+| Battery Voltage				| Pack Voltage					| 0xF00D		|
+| Battery Current				| Signed Pack Current			| 0xF00C		|
+| Battery Temperature			| Heatsink Temperature Sensor	| 0xF02D		|
+| Pack Charge					| Pack State of Charge			| 0xF00F		|
