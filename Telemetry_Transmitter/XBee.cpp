@@ -16,13 +16,19 @@ bool XBee::configure()
   delay(1500);
   String ok = m_serial.readStringUntil('\r');
   if (ok != "OK")
+  {
+    DEBUG("[XBee] Config fail point 1: " + ok);
     return false;
+  }
   m_serial.write("ATAP 1\r");
   delay(2000);
   ok = "";
   ok = m_serial.readStringUntil('\r');
   if (ok != "OK")
+  {
+    DEBUG("[XBee] Config fail point 2: " + ok);
     return false;
+  }
   m_serial.write("CN\r");
   return true;
 }
@@ -135,7 +141,7 @@ userFrame XBee::read()
     if (recvd == -1) 
     {
       // DEBUG("XBee read: Start delimiter not found.");
-      return NULL_USER_FRAME; 
+      return NULL_USER_FRAME;
     }
   } while (recvd != 0x7E);
   DEBUG("XBee read: Got start delimiter 0x7E");
