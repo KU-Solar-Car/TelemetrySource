@@ -379,31 +379,48 @@ int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
 
 // Read data from CAN bus =====================================================
 
-// TODO: implement rest of these?
 void CANCallback(CAN_FRAME* frame)
 {
-  // if msg id == 0x6B1, let maxTempCallBack handle it
-  if (frame->id == 0x6B1)
-  {
-    maxTempCallback(frame);
-  }
   #ifdef DEBUG_BUILD
     printCanFrame(frame);
   #endif
+  processCanFrame(frame, xbeeStats);
+  processCanFrame(frame, serialStats);
 }
 
-// TODO reimplement
-void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
-{
-  /*double newTemp = frame->data.bytes[4];
-  if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
+void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats) {
+  switch (frame->id)
   {
-    testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
-  }*/
+  case 0x36:
+    break;
+  case 0x6b0:
+    break;
+  case 0x6b1: // Battery temperature - keep the max value
+    keepMaxStat(stats, TelemetryData::Key::BATT_TEMP, frame->data.bytes[4]);
+    break;
+  case 0x6b2:
+    break;
+  case 0x6b3:
+    break;
+  case 0x6b4:
+    break;
+  case 0x6b5:
+    break;
+  default:
+    break;
+  }
+}
+
+void keepMaxStat(volatile TelemetryData& stats, int key, double newValue)
+{
+  if (!stats.isPresent(key) || stats.getDouble(key) < newValue)
+  {
+    stats.setDouble(key, newValue);
+  }
 }
 
 // For testing, set some sensors to random values
-void randomizeData(TelemetryData& stats)
+void randomizeData(volatile TelemetryData& stats)
 {
   for (int i = 0; i < TelemetryData::Key::_LAST; i++)
   {
