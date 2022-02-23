@@ -34,7 +34,9 @@ char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-volatile TelemetryData testStats;
+// Separate stats for XBee and DriverHUD since they get cleared after sending
+volatile TelemetryData xbeeStats;
+volatile TelemetryData serialStats;
 
 volatile bool resetButtonPressed = false;
 volatile bool shutdownButtonPressed = false;
@@ -141,7 +143,7 @@ void xbeeLoop() {
   /*if (millis() >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame += XBEE_TX_INTERVAL;
-    sendStats(testStats);
+    sendStats(xbeeStats);
   }*/
   yield();
 }
@@ -150,7 +152,8 @@ void gpsLoop() {
   //DEBUG("GPS loop");
   // Read GPS values
   gpsFormatter.readSerial(10); // Doesn't need a long timeout
-  gpsFormatter.writeToData(testStats);
+  gpsFormatter.writeToData(xbeeStats);
+  gpsFormatter.writeToData(serialStats);
   yield();
 }
 
@@ -206,7 +209,7 @@ void checkSerialCommands() {
   char cmd = Serial.read();
   if (cmd == 's') shutdownButtonPressed = true;
   else if (cmd == 'r') resetButtonPressed = true;
-  else if (cmd == 'd') sendStatsSerial(testStats); // DriverHUD requesting data
+  else if (cmd == 'd') sendStatsSerial(serialStats); // DriverHUD requesting data
   else if (cmd == 'x') checkShutdown = true;
   else if (cmd == '?') checkConnected = true;
 }
@@ -269,14 +272,14 @@ void sendStatsPeriodically(int period)
   {
     nextTimeWeSendFrame = myTime + period;
     DEBUG("Free memory: " + String(freeMemory()) + "\0");
-    // randomizeData();
+    // randomizeData(xbeeStats);
     if (xbee.isConnected(5000))
     {
       userFrame resp;
-      sendStats(testStats);
+      sendStats(xbeeStats);
       const unsigned long myTime = millis();
       const unsigned timeout = 10000;
-      testStats.clear();
+      xbeeStats.clear(); // TODO: This should only happen if sent successfully
       do
       {
         resp = xbee.read();
@@ -348,6 +351,7 @@ void sendStatsSerial(volatile TelemetryData& stats)
   DEBUG("sendStatsSerial");
   fillDataBuffer(dataBuffer, stats);
   Serial.println(dataBuffer);
+  stats.clear();
 }
 
 int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
@@ -385,35 +389,36 @@ void CANCallback(CAN_FRAME* frame)
   }
   #ifdef DEBUG_BUILD
     printCanFrame(frame);
-  #endif 
+  #endif
 }
 
+// TODO reimplement
 void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
 {
-  double newTemp = frame->data.bytes[4];
+  /*double newTemp = frame->data.bytes[4];
   if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
   {
     testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
-  }
+  }*/
 }
 
 // For testing, set some sensors to random values
-void randomizeData()
+void randomizeData(TelemetryData& stats)
 {
   for (int i = 0; i < TelemetryData::Key::_LAST; i++)
   {
     
     if (i == TelemetryData::Key::BMS_FAULT)
     {
-      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max
+      stats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max
     }
     else if (i == TelemetryData::Key::GPS_TIME)
     {
-      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
+      stats.setUInt(i, static_cast<unsigned int>(random(5001)));
     }
     else
     {
-      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
+      stats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
     }
   }
 }
