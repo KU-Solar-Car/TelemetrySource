@@ -147,9 +147,9 @@ void xbeeLoop() {
 }
 
 void gpsLoop() {
-  DEBUG("GPS loop");
+  //DEBUG("GPS loop");
   // Read GPS values
-  gpsFormatter.readSerial(2000);
+  gpsFormatter.readSerial(10); // Doesn't need a long timeout
   gpsFormatter.writeToData(testStats);
   yield();
 }
@@ -383,7 +383,9 @@ void CANCallback(CAN_FRAME* frame)
   {
     maxTempCallback(frame);
   }
-  
+  #ifdef DEBUG_BUILD
+    printCanFrame(frame);
+  #endif 
 }
 
 void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
@@ -455,4 +457,20 @@ void printReceivedFrame(userFrame& recvd)
   }
   // else
     // DEBUG("Got here nothing :(");
+}
+
+void printCanFrame(CAN_FRAME* frame)
+{
+  Serial.println("[BEGIN CAN frame]:");
+  Serial.println("ID (EID/SID): 0x" + String(frame->id, HEX));
+  Serial.println("Family ID: 0x" + String(frame->fid, HEX));
+  Serial.println("Extended ID: 0x" + String(frame->extended, HEX));
+  Serial.println("Length: " + String(frame->length));
+  //Serial.println("Data (in hex): " + String(frame->data.value, HEX)); // Can't do uint64_t
+  String data = "Data (in hex): " ;
+  for (int i = 0; i < frame->length; i++) {
+    data += String(frame->data.bytes[i], HEX) + " ";
+  }
+  Serial.println(data);
+  Serial.println("[END CAN frame]");
 }

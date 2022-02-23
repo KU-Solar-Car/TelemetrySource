@@ -119,7 +119,7 @@ bool XBee::shutdownCommandMode()
   if (ok != "OK")
     return false;
   m_serial.write("ATSD 0\r");
-  m_serial.setTimeout(120000); // TODO: Serial timeout doesn't work with Scheduler
+  m_serial.setTimeout(120000); // TODO: Serial timeout doesn't yield for Scheduler
   ok = "";
   ok = m_serial.readStringUntil('\r');
   m_serial.setTimeout(1000);

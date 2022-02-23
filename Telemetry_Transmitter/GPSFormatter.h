@@ -29,9 +29,10 @@ void GPSFormatter::readSerial(int delay)
     while (serial->available())
     {
       char red = serial->read();
-      gps.encode(red);
+      gps.encode(red); // TODO: This returns a boolean for if it managed to get new data
     }
-  } while (millis() - start < delay);
+    yield();
+  } while (millis() - start < delay); // TODO: Is this loop even needed?
 }
 
 void GPSFormatter::writeToData(volatile TelemetryData& stats)
