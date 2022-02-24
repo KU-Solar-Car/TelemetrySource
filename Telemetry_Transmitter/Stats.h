@@ -5,25 +5,30 @@ struct TelemetryData
 {
   enum Key: int
   {
+    // BMS
     BATT_VOLTAGE,
     BATT_CURRENT,
     BATT_TEMP,
     BMS_FAULT,
+
+    // GPS
     GPS_COURSE, // Degrees
     GPS_TIME, // Format hhmmsscc
     GPS_DATE, // Format ddmmyy
     GPS_LAT,
     GPS_LON,
-    GPS_VEL_EAST,
-    GPS_VEL_NOR,
-    GPS_VEL_UP,
     GPS_SPD, // MPH
+
+    // Other
     SOLAR_VOLTAGE,
     SOLAR_CURRENT,
     MOTOR_SPD,
-    _LAST
     // TODO: Add motor temperature
+
+    _LAST
   };
+
+  // TODO: Define string format and type for each of above
 
   struct
   {
