@@ -54,6 +54,9 @@ struct TelemetryData
 
   void clear() volatile;
   
+  // writes to buf and returns length
+  int toJsonString(char buf[]) volatile;
+  int toKeyValuePair(char* dest, int key) volatile;
 };
 
 

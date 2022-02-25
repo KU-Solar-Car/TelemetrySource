@@ -297,39 +297,11 @@ void sendStatsPeriodically(int period)
   }
 }
 
-// Create a JSON string containing the latest sensor values from stats and store it in buf
-int fillDataBuffer(char buf[], volatile TelemetryData& stats)
-{
-  strcpy(buf, "{");
-  
-  int bodyLength = 1; // the open bracket
-  for (int k = 0; k < TelemetryData::Key::_LAST; k++)
-  {
-    if (stats.isPresent(k))
-    {
-      bodyLength += toKeyValuePair(buf + strlen(buf), k, stats) + 1; // append the key-value pair, plus the trailing comma
-      strcat(buf, ",");
-    }
-  }
-  // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
-  // If not, we need to append a }, and also add 1 to the content length.
-  if (buf[strlen(buf)-1] == ',')
-  {
-    buf[strlen(buf)-1] = '}';
-  }
-  else if (buf[strlen(buf)-1] == '{')
-  {
-    strcat(buf, "}");
-    bodyLength++;
-  }
-  return bodyLength;
-}
-
 // Send stats to the cloud via Xbee
 void sendStats(volatile TelemetryData& stats)
 {
   DEBUG("sendStats");
-  int bodyLength = fillDataBuffer(dataBuffer, stats);
+  int bodyLength = stats.toJsonString(dataBuffer);
   char bodyLengthStr[4]; 
   sprintf(bodyLengthStr, "%03u", bodyLength);
   
@@ -349,30 +321,11 @@ void sendStats(volatile TelemetryData& stats)
 void sendStatsSerial(volatile TelemetryData& stats)
 {
   DEBUG("sendStatsSerial");
-  fillDataBuffer(dataBuffer, stats);
+  stats.toJsonString(dataBuffer);
   Serial.println(dataBuffer);
   stats.clear();
 }
 
-int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
-{
-  switch(key)
-  {
-    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
-    case TelemetryData::Key::GPS_COURSE: return sprintf(dest, "\"gps_course\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":\"%08u\"", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_DATE: return sprintf(dest, "\"gps_date\":\"%06u\"", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble(key)); break;
-  }
-}
 
 // Read data from CAN bus =====================================================
 
