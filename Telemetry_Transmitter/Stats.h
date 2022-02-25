@@ -6,10 +6,29 @@ struct TelemetryData
   enum Key: int
   {
     // BMS
-    BATT_VOLTAGE,
-    BATT_CURRENT,
-    BATT_TEMP,
-    BMS_FAULT,
+    PACK_VOLTAGE,
+    PACK_SOC,
+    PACK_CURRENT,
+    MIN_PACK_TEMP,
+    AVG_PACK_TEMP,
+    MAX_PACK_TEMP,
+    MIN_CELL_VOLTAGE,
+    AVG_CELL_VOLTAGE,
+    MAX_CELL_VOLTAGE,
+    INPUT_VOLTAGE,
+    AVG_CELL_RESISTANCE,
+    BMS_FAULT, // TODO: This should be more sophisticated
+
+    // Motor controller
+    MOTOR_SPEED,
+    MOTOR_CURRENT,
+    MOTOR_CONTROLLER_TEMP,
+    MOTOR_TEMP,
+    MOTOR_FAULT, // TODO
+
+    // Solar MPPTs
+    SOLAR_VOLTAGE,
+    SOLAR_FAULT, // TODO
 
     // GPS
     GPS_COURSE, // Degrees
@@ -17,13 +36,7 @@ struct TelemetryData
     GPS_DATE, // Format ddmmyy
     GPS_LAT,
     GPS_LON,
-    GPS_SPD, // MPH
-
-    // Other
-    SOLAR_VOLTAGE,
-    SOLAR_CURRENT,
-    MOTOR_SPD,
-    // TODO: Add motor temperature
+    GPS_SPEED, // MPH
 
     _LAST
   };

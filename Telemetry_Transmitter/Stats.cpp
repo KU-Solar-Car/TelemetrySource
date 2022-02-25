@@ -87,18 +87,33 @@ int TelemetryData::toKeyValuePair(char* dest, int key) volatile
 {
   switch(key)
   {
-    case Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", getDouble(key)); break;
-    case Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", getDouble(key)); break;
-    case Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", getDouble(key)); break;
-    case Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", getBool(key)); break;
-    case Key::GPS_COURSE: return sprintf(dest, "\"gps_course\":%6f", getDouble(key)); break;
-    case Key::GPS_TIME: return sprintf(dest, "\"gps_time\":\"%08u\"", getUInt(key)); break;
-    case Key::GPS_DATE: return sprintf(dest, "\"gps_date\":\"%06u\"", getUInt(key)); break;
-    case Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", getDouble(key)); break;
-    case Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", getDouble(key)); break;
-    case Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", getDouble(key)); break;
-    case Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", getDouble(key)); break;
-    case Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", getDouble(key)); break;
-    case Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", getDouble(key)); break;
+    case Key::PACK_VOLTAGE:          return sprintf(dest, "\"pack_voltage\":%6f",          getDouble(key));
+    case Key::PACK_SOC:              return sprintf(dest, "\"pack_soc\":%6f",              getDouble(key));
+    case Key::PACK_CURRENT:          return sprintf(dest, "\"pack_current\":%6f",          getDouble(key));
+    case Key::MIN_PACK_TEMP:         return sprintf(dest, "\"min_pack_temp\":%6f",         getDouble(key));
+    case Key::AVG_PACK_TEMP:         return sprintf(dest, "\"avg_pack_temp\":%6f",         getDouble(key));
+    case Key::MAX_PACK_TEMP:         return sprintf(dest, "\"max_pack_temp\":%6f",         getDouble(key));
+    case Key::MIN_CELL_VOLTAGE:      return sprintf(dest, "\"min_cell_voltage\":%6f",      getDouble(key));
+    case Key::AVG_CELL_VOLTAGE:      return sprintf(dest, "\"avg_cell_voltage\":%6f",      getDouble(key));
+    case Key::MAX_CELL_VOLTAGE:      return sprintf(dest, "\"max_cell_voltage\":%6f",      getDouble(key));
+    case Key::INPUT_VOLTAGE:         return sprintf(dest, "\"input_voltage\":%6f",         getDouble(key));
+    case Key::AVG_CELL_RESISTANCE:   return sprintf(dest, "\"avg_cell_resistance\":%6f",   getDouble(key));
+    case Key::BMS_FAULT:             return sprintf(dest, "\"bms_fault\":%d",              getBool(key)  );
+
+    case Key::MOTOR_SPEED:           return sprintf(dest, "\"motor_speed\":%6f",           getDouble(key));
+    case Key::MOTOR_CURRENT:         return sprintf(dest, "\"motor_current\":%6f",         getDouble(key));
+    case Key::MOTOR_CONTROLLER_TEMP: return sprintf(dest, "\"motor_controller_temp\":%6f", getDouble(key));
+    case Key::MOTOR_TEMP:            return sprintf(dest, "\"motor_temp\":%6f",            getDouble(key));
+    case Key::MOTOR_FAULT:           return sprintf(dest, "\"motor_fault\":%d",            getBool(key)  );
+
+    case Key::SOLAR_VOLTAGE:         return sprintf(dest, "\"solar_voltage\":%6f",         getDouble(key));
+    case Key::SOLAR_FAULT:           return sprintf(dest, "\"solar_fault\":%d",            getBool(key)  );
+
+    case Key::GPS_COURSE:            return sprintf(dest, "\"gps_course\":%6f",            getDouble(key));
+    case Key::GPS_TIME:              return sprintf(dest, "\"gps_time\":\"%08u\"",         getUInt(key)  );
+    case Key::GPS_DATE:              return sprintf(dest, "\"gps_date\":\"%06u\"",         getUInt(key)  );
+    case Key::GPS_LAT:               return sprintf(dest, "\"gps_lat\":%6f",               getDouble(key));
+    case Key::GPS_LON:               return sprintf(dest, "\"gps_lon\":%6f",               getDouble(key));
+    case Key::GPS_SPEED:             return sprintf(dest, "\"gps_speed\":%6f",             getDouble(key));
   }
 }

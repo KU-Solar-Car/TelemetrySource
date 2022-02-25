@@ -339,26 +339,47 @@ void CANCallback(CAN_FRAME* frame)
 }
 
 void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats) {
+
   switch (frame->id)
   {
   case 0x36:
     break;
-  case 0x6b0:
+  case 0x6b0: // Basic pack information
+    stats.setDouble(TelemetryData::Key::PACK_VOLTAGE, frame->data.s2 / 10.0);
+    stats.setDouble(TelemetryData::Key::PACK_SOC, frame->data.bytes[6] / 2.0);
     break;
-  case 0x6b1: // Battery temperature - bytes[4] is max pack temp
-    keepMaxStat(stats, TelemetryData::Key::BATT_TEMP, frame->data.bytes[4]);
-    // average and low pack temp are also available
+  case 0x6b1: // Pack temperature (amphours and health also available)
+    keepMaxStat(stats, TelemetryData::Key::MAX_PACK_TEMP, frame->data.bytes[4]);
+    keepMinStat(stats, TelemetryData::Key::MIN_PACK_TEMP, frame->data.bytes[5]);
+    stats.setDouble(TelemetryData::Key::AVG_PACK_TEMP, frame->data.bytes[6]);
     break;
-  case 0x6b2:
+  case 0x6b2: // Cell voltage extrema
+    keepMinStat(stats, TelemetryData::Key::MIN_CELL_VOLTAGE, frame->data.s0 / 1000.0);
+    keepMaxStat(stats, TelemetryData::Key::MAX_CELL_VOLTAGE, ((frame->data.bytes[3] << 8) + frame->data.bytes[4]) / 1000.0);
+    // Could also get the IDs of min/max cell voltage
     break;
-  case 0x6b3:
+  case 0x6b3: // Misc cell info
+    stats.setDouble(TelemetryData::Key::AVG_CELL_VOLTAGE, frame->data.s0 / 1000.0);
+    stats.setDouble(TelemetryData::Key::INPUT_VOLTAGE, frame->data.s1 / 10.0);
+    stats.setDouble(TelemetryData::Key::AVG_CELL_RESISTANCE, frame->data.s2 / 100.0);
     break;
-  case 0x6b4:
+  case 0x6b4: // BMS MPO state
     break;
-  case 0x6b5:
+  case 0x6b5: // BMS Relay state
     break;
+  case 0x6b6: // Pack current and BMS faults
+    stats.setDouble(TelemetryData::Key::PACK_CURRENT, frame->data.s0 / 10.0);
+    stats.setBool(TelemetryData::Key::BMS_FAULT, (frame->data.s1 << 8) + frame->data.s2); // TODO (bit flags)
   default:
     break;
+  }
+}
+
+void keepMinStat(volatile TelemetryData& stats, int key, double newValue)
+{
+  if (!stats.isPresent(key) || stats.getDouble(key) > newValue)
+  {
+    stats.setDouble(key, newValue);
   }
 }
 
