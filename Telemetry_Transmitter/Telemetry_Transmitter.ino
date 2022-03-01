@@ -332,44 +332,45 @@ void sendStatsSerial(volatile TelemetryData& stats)
 void CANCallback(CAN_FRAME* frame)
 {
   #ifdef DEBUG_BUILD
-    printCanFrame(frame);
+    //printCanFrame(frame);
   #endif
   processCanFrame(frame, xbeeStats);
   processCanFrame(frame, serialStats);
 }
 
-void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats) {
-
+void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
+{
+  uint8_t* bytes = frame->data.bytes;
   switch (frame->id)
   {
   case 0x36:
     break;
   case 0x6b0: // Basic pack information
-    stats.setDouble(TelemetryData::Key::PACK_VOLTAGE, frame->data.s2 / 10.0);
-    stats.setDouble(TelemetryData::Key::PACK_SOC, frame->data.bytes[6] / 2.0);
+    stats.setDouble(TelemetryData::Key::PACK_VOLTAGE, ((bytes[4] << 8) + bytes[5]) / 10.0);
+    stats.setDouble(TelemetryData::Key::PACK_SOC, bytes[6] / 2.0);
     break;
   case 0x6b1: // Pack temperature (amphours and health also available)
-    keepMaxStat(stats, TelemetryData::Key::MAX_PACK_TEMP, frame->data.bytes[4]);
-    keepMinStat(stats, TelemetryData::Key::MIN_PACK_TEMP, frame->data.bytes[5]);
-    stats.setDouble(TelemetryData::Key::AVG_PACK_TEMP, frame->data.bytes[6]);
+    keepMaxStat(stats, TelemetryData::Key::MAX_PACK_TEMP, bytes[4]);
+    keepMinStat(stats, TelemetryData::Key::MIN_PACK_TEMP, bytes[5]);
+    stats.setDouble(TelemetryData::Key::AVG_PACK_TEMP, bytes[6]);
     break;
   case 0x6b2: // Cell voltage extrema
-    keepMinStat(stats, TelemetryData::Key::MIN_CELL_VOLTAGE, frame->data.s0 / 1000.0);
-    keepMaxStat(stats, TelemetryData::Key::MAX_CELL_VOLTAGE, ((frame->data.bytes[3] << 8) + frame->data.bytes[4]) / 1000.0);
+    keepMinStat(stats, TelemetryData::Key::MIN_CELL_VOLTAGE, ((bytes[0] << 8) + bytes[1]) / 10000.0);
+    keepMaxStat(stats, TelemetryData::Key::MAX_CELL_VOLTAGE, ((bytes[3] << 8) + bytes[4]) / 10000.0);
     // Could also get the IDs of min/max cell voltage
     break;
   case 0x6b3: // Misc cell info
-    stats.setDouble(TelemetryData::Key::AVG_CELL_VOLTAGE, frame->data.s0 / 1000.0);
-    stats.setDouble(TelemetryData::Key::INPUT_VOLTAGE, frame->data.s1 / 10.0);
-    stats.setDouble(TelemetryData::Key::AVG_CELL_RESISTANCE, frame->data.s2 / 100.0);
+    stats.setDouble(TelemetryData::Key::AVG_CELL_VOLTAGE, ((bytes[0] << 8) + bytes[1]) / 10000.0); 
+    stats.setDouble(TelemetryData::Key::INPUT_VOLTAGE, ((bytes[2] << 8) + bytes[3]) / 10.0);
+    stats.setDouble(TelemetryData::Key::AVG_CELL_RESISTANCE, ((bytes[4] << 8) + bytes[5]) / 100.0);
     break;
   case 0x6b4: // BMS MPO state
     break;
   case 0x6b5: // BMS Relay state
     break;
   case 0x6b6: // Pack current and BMS faults
-    stats.setDouble(TelemetryData::Key::PACK_CURRENT, frame->data.s0 / 10.0);
-    stats.setBool(TelemetryData::Key::BMS_FAULT, (frame->data.s1 << 8) + frame->data.s2); // TODO (bit flags)
+    stats.setDouble(TelemetryData::Key::PACK_CURRENT, ((bytes[0] << 8) + bytes[1]) / 10.0);
+    stats.setBool(TelemetryData::Key::BMS_FAULT, frame->data.s1 > 0 || frame->data.s2 > 0); // TODO (bit flags)
   default:
     break;
   }
