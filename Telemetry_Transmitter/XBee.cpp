@@ -10,25 +10,27 @@
 #include "IPAddress.h"
 #include <Arduino.h>
 
+bool XBee::waitForOK(unsigned timeout = 1000)
+{
+  m_serial.setTimeout(10); // TODO this should be somewhere else (only called once)
+  unsigned int startTime = millis();
+  do
+  {
+    String ok = m_serial.readStringUntil('\r');
+    if (ok == "OK") return true;
+    delay(50); // Give scheduler opportutity to run other threads
+  } while (millis() < (startTime + timeout));
+  return false;
+}
+
 bool XBee::configure()
 {
   m_serial.write("+++");
   delay(1500);
-  String ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-  {
-    DEBUG("[XBee] Config fail point 1: " + ok);
-    return false;
-  }
+  if (!waitForOK()) return false;
   m_serial.write("ATAP 1\r");
   delay(2000);
-  ok = "";
-  ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-  {
-    DEBUG("[XBee] Config fail point 2: " + ok);
-    return false;
-  }
+  if (!waitForOK()) return false;
   m_serial.write("CN\r");
   return true;
 }
@@ -115,16 +117,9 @@ bool XBee::shutdownCommandMode()
 {
   m_serial.write("+++");
   delay(1500);
-  String ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-    return false;
+  if (!waitForOK()) return false;
   m_serial.write("ATSD 0\r");
-  m_serial.setTimeout(120000); // TODO: Serial timeout doesn't yield for Scheduler
-  ok = "";
-  ok = m_serial.readStringUntil('\r');
-  m_serial.setTimeout(1000);
-  if (ok != "OK")
-    return false;
+  if (!waitForOK(120000)) return false;
   m_serial.write("CN\r");
   return true;
 }

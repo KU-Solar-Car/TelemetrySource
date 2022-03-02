@@ -41,8 +41,6 @@ struct TelemetryData
     _LAST
   };
 
-  // TODO: Define string format and type for each of above
-
   struct
   {
     union {
