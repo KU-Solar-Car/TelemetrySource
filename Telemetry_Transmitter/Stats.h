@@ -17,18 +17,18 @@ struct TelemetryData
     MAX_CELL_VOLTAGE,
     INPUT_VOLTAGE,
     AVG_CELL_RESISTANCE,
-    BMS_FAULT, // TODO: This should be more sophisticated
+    BMS_FAULT,
 
     // Motor controller
     MOTOR_SPEED,
     MOTOR_CURRENT,
     MOTOR_CONTROLLER_TEMP,
     MOTOR_TEMP,
-    MOTOR_FAULT, // TODO
+    MOTOR_FAULT,
 
     // Solar MPPTs
     SOLAR_VOLTAGE,
-    SOLAR_FAULT, // TODO
+    SOLAR_FAULT,
 
     // GPS
     GPS_COURSE, // Degrees

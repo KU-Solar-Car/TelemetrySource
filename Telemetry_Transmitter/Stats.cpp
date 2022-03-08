@@ -98,16 +98,16 @@ int TelemetryData::toKeyValuePair(char* dest, int key) volatile
     case Key::MAX_CELL_VOLTAGE:      return sprintf(dest, "\"max_cell_voltage\":%6f",      getDouble(key));
     case Key::INPUT_VOLTAGE:         return sprintf(dest, "\"input_voltage\":%6f",         getDouble(key));
     case Key::AVG_CELL_RESISTANCE:   return sprintf(dest, "\"avg_cell_resistance\":%6f",   getDouble(key));
-    case Key::BMS_FAULT:             return sprintf(dest, "\"bms_fault\":%d",              getBool(key)  );
+    case Key::BMS_FAULT:             return sprintf(dest, "\"bms_fault\":%d",              getUInt(key)  );
 
     case Key::MOTOR_SPEED:           return sprintf(dest, "\"motor_speed\":%6f",           getDouble(key));
     case Key::MOTOR_CURRENT:         return sprintf(dest, "\"motor_current\":%6f",         getDouble(key));
     case Key::MOTOR_CONTROLLER_TEMP: return sprintf(dest, "\"motor_controller_temp\":%6f", getDouble(key));
     case Key::MOTOR_TEMP:            return sprintf(dest, "\"motor_temp\":%6f",            getDouble(key));
-    case Key::MOTOR_FAULT:           return sprintf(dest, "\"motor_fault\":%d",            getBool(key)  );
+    case Key::MOTOR_FAULT:           return sprintf(dest, "\"motor_fault\":%d",            getUInt(key)  );
 
     case Key::SOLAR_VOLTAGE:         return sprintf(dest, "\"solar_voltage\":%6f",         getDouble(key));
-    case Key::SOLAR_FAULT:           return sprintf(dest, "\"solar_fault\":%d",            getBool(key)  );
+    case Key::SOLAR_FAULT:           return sprintf(dest, "\"solar_fault\":%d",            getUInt(key)  );
 
     case Key::GPS_COURSE:            return sprintf(dest, "\"gps_course\":%6f",            getDouble(key));
     case Key::GPS_TIME:              return sprintf(dest, "\"gps_time\":\"%08u\"",         getUInt(key)  );

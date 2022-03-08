@@ -16,9 +16,8 @@
 const int XBEE_TX_INTERVAL = 2000;
 
 const byte BYTE_MIN = -128;
-byte maxTemp;
 
-unsigned long nextTimeWeSendFrame;
+unsigned long nextTimeWeSendFrame = 0;
 
 // Monitored serial for debugging XBee
 //MonitoredSerial mySerial(Serial2, Serial);
@@ -43,9 +42,6 @@ volatile bool shutdownButtonPressed = false;
 
 volatile bool resetButtonMaybePressed = false;
 volatile bool shutdownButtonMaybePressed = false;
-
-volatile bool checkShutdown = false;
-volatile bool checkConnected = false;
 
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
@@ -86,22 +82,16 @@ void setup()
   /* =================================
    * Wait for modem to associate before starting 
    * =================================*/
-  userFrame status;
   // TODO: This doesn't seem reliable. Maybe use isConnected
   // Could also move this to xbeeLoop so other tasks don't wait for it
+  /*userFrame status;
   DEBUG("XBee: Waiting for network to associate. Send \"!\" to skip.");
   do
   {
     status = xbee.read();
     printReceivedFrame(status);
   } while(!(status.frameType == 0x8A && status.frameData[0] == 2) && Serial.read() != '!');
-  DEBUG("XBee: Network associated");
-  
-  /* =================================
-   * Initialize variables that track stuff
-   * =================================*/
-  maxTemp = -128;
-  nextTimeWeSendFrame = 0;
+  DEBUG("XBee: Network associated");*/
 
   // Shutdown and reset pins
   pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
@@ -128,11 +118,8 @@ void setup()
 
 // Separate loops for different tasks =========================================
 
-// CAN data loop
 void loop()
 {
-  // Read most data from CAN bus
-  // setMaxTemp();
   yield();
 }
 
@@ -210,8 +197,18 @@ void checkSerialCommands() {
   if (cmd == 's') shutdownButtonPressed = true;
   else if (cmd == 'r') resetButtonPressed = true;
   else if (cmd == 'd') sendStatsSerial(serialStats); // DriverHUD requesting data
-  else if (cmd == 'x') checkShutdown = true;
-  else if (cmd == '?') checkConnected = true;
+  else if (cmd == 'x') // Check shutdown
+  {
+    DEBUG("Checking if XBee is shutdown, please wait up to 5 seconds...");
+    if (xbee.isShutDown(5000)) Serial.println("isShutDown: YES!");
+    else Serial.println("isShutDown: No :(");
+  }
+  else if (cmd == '?') // Check connected
+  {
+    DEBUG("Checking if XBee is connected, please wait up to 5 seconds...");
+    if (xbee.isConnected(5000)) Serial.println("isConnected: YES!");
+    else Serial.println("isConnected: No :(");
+  }
 }
 
 // TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
@@ -245,22 +242,6 @@ void shutdownOnCommand()
     resetButtonPressed = false;
     shutdownButtonPressed = false;
   }
-  else if (checkShutdown)
-  {
-    Serial.println("Checking if XBee is shutdown, please wait up to 5 seconds...");
-    bool isShutdown = xbee.isShutDown(5000);
-    if (isShutdown) Serial.println("isShutDown: YES!");
-    else Serial.println("isShutDown: No :(");
-    checkShutdown = false;
-  }
-  else if (checkConnected)
-  {
-    Serial.println("Checking if XBee is connected, please wait up to 5 seconds...");
-    bool isConnected = xbee.isConnected(5000);
-    if (isConnected) Serial.println("isConnected: YES!");
-    else Serial.println("isConnected: No :(");
-    checkConnected = false;
-  }
 }
 
 // Format and send telemetry data =============================================
@@ -283,6 +264,7 @@ void sendStatsPeriodically(int period)
       do
       {
         resp = xbee.read();
+        yield();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
       if (resp.frameType != 0xB0)
       {
@@ -327,7 +309,7 @@ void sendStatsSerial(volatile TelemetryData& stats)
 }
 
 
-// Read data from CAN bus =====================================================
+// Read and store data from CAN bus ===========================================
 
 void CANCallback(CAN_FRAME* frame)
 {
@@ -370,7 +352,7 @@ void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
     break;
   case 0x6b6: // Pack current and BMS faults
     stats.setDouble(TelemetryData::Key::PACK_CURRENT, ((bytes[0] << 8) + bytes[1]) / 10.0);
-    stats.setBool(TelemetryData::Key::BMS_FAULT, frame->data.s1 > 0 || frame->data.s2 > 0); // TODO (bit flags)
+    stats.setUInt(TelemetryData::Key::BMS_FAULT, bytes[2] << 24 + bytes[3] << 16 + bytes[4] << 8 + bytes[5]);
   default:
     break;
   }
@@ -392,7 +374,9 @@ void keepMaxStat(volatile TelemetryData& stats, int key, double newValue)
   }
 }
 
-// For testing, set some sensors to random values
+// Testing/debugging functions ================================================
+
+// Set some sensors to random values
 void randomizeData(volatile TelemetryData& stats)
 {
   for (int i = 0; i < TelemetryData::Key::_LAST; i++)
@@ -413,30 +397,11 @@ void randomizeData(volatile TelemetryData& stats)
   }
 }
 
-/* =================================
- * Temporarily not being used
- * =================================*/
-//void setMaxTemp()
-//{
-//  // Check for received message
-//  long lMsgID;
-//  bool bExtendedFormat;
-//  byte cRxData[8];
-//  byte cDataLen;
-//  if (canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
-//  {
-//    if (lMsgID == 0x6B1) {
-//      if (cRxData[4] > testStats.getDouble(TelemetryData::Key::BATT_TEMP))
-//        testStats.setDouble(TelemetryData::Key::BATT_TEMP, cRxData[4]);
-//    }
-//  } // end if
-//}
-
-//void httpsTest()
-//{
-//  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
-//  xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
-//}
+void httpsTest()
+{
+  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
+  xbee.sendTCP(IPAddress(54, 166, 163, 67), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
+}
 
 void printReceivedFrame(userFrame& recvd)
 {
