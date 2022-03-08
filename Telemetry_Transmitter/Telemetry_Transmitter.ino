@@ -9,15 +9,15 @@
 #include "auth_key.h"
 #include <MemoryFree.h>   // https://github.com/mpflaga/Arduino-MemoryFree
 #include <pgmStrToRAM.h>
-#include <DueTimer.h>     // https://github.com/ivanseidel/DueTimer/releases
+#include <DueTimer.h>
+#include <Scheduler.h>
 
 // Number of milliseconds to wait between transmitting data packets
 const int XBEE_TX_INTERVAL = 2000;
 
 const byte BYTE_MIN = -128;
-byte maxTemp;
 
-unsigned long nextTimeWeSendFrame;
+unsigned long nextTimeWeSendFrame = 0;
 
 // Monitored serial for debugging XBee
 //MonitoredSerial mySerial(Serial2, Serial);
@@ -33,16 +33,15 @@ char dataBuffer[DATA_BUFFER_SIZE]; // Buffer for XBee data
 const size_t REQUEST_BUFFER_SIZE = 600;
 char requestBuffer[REQUEST_BUFFER_SIZE];
 
-volatile TelemetryData testStats;
+// Separate stats for XBee and DriverHUD since they get cleared after sending
+volatile TelemetryData xbeeStats;
+volatile TelemetryData serialStats;
 
 volatile bool resetButtonPressed = false;
 volatile bool shutdownButtonPressed = false;
 
 volatile bool resetButtonMaybePressed = false;
 volatile bool shutdownButtonMaybePressed = false;
-
-volatile bool checkShutdown = false;
-volatile bool checkConnected = false;
 
 const int SHUTDOWN_PIN = 2;
 const int RESET_PIN = 3;
@@ -83,21 +82,16 @@ void setup()
   /* =================================
    * Wait for modem to associate before starting 
    * =================================*/
-  userFrame status;
   // TODO: This doesn't seem reliable. Maybe use isConnected
+  // Could also move this to xbeeLoop so other tasks don't wait for it
+  /*userFrame status;
   DEBUG("XBee: Waiting for network to associate. Send \"!\" to skip.");
   do
   {
     status = xbee.read();
     printReceivedFrame(status);
   } while(!(status.frameType == 0x8A && status.frameData[0] == 2) && Serial.read() != '!');
-  DEBUG("XBee: Network associated");
-  
-  /* =================================
-   * Initialize variables that track stuff
-   * =================================*/
-  maxTemp = -128;
-  nextTimeWeSendFrame = 0;
+  DEBUG("XBee: Network associated");*/
 
   // Shutdown and reset pins
   pinMode(SHUTDOWN_PIN, INPUT_PULLUP);
@@ -110,42 +104,51 @@ void setup()
   Timer0.attachInterrupt(shutdown_interrupt);
   Timer1.attachInterrupt(reset_interrupt);
 
+  // Setup multiple loops for the hardware scheduler to run
+  // If a loop is doing something that takes a long time (e.g. busy waiting
+  // or serial with long timeout), it should call yield() on a regular basis
+  // to allow other loops to run. The built-in delay function works as well.
+  Scheduler.startLoop(xbeeLoop);
+  Scheduler.startLoop(gpsLoop);
+  Scheduler.startLoop(commandLoop);
+
   // Maybe this should be Pi-readable format
   DEBUG("Setup complete");
 }
 
-// loop should be kept <20 ms during normal operation to ensure DriverHUD can regularly receive data
-// It is ok for shutdown and initialization to take longer
+// Separate loops for different tasks =========================================
+
 void loop()
 {
-  // Read most data from CAN bus
-  // setMaxTemp();
+  yield();
+}
 
-  // Read GPS values
-  gpsFormatter.readSerial(10); // Testing 10ms delay - used to be 2000ms
-  gpsFormatter.writeToData(testStats);
-
-  // This function calls xbee.isConnected and xbee.read which are long blocking
-  // calls, so it is currently not used to keep latency low for the DriverHUD
-  // sendStatsPeriodically(XBEE_TX_INTERVAL);
+void xbeeLoop() {
+  sendStatsPeriodically(XBEE_TX_INTERVAL);
 
   // Send stats to the XBee
-  if (millis() >= nextTimeWeSendFrame)
+  /*if (millis() >= nextTimeWeSendFrame)
   {
     nextTimeWeSendFrame += XBEE_TX_INTERVAL;
-    sendStats(testStats);
-  }
+    sendStats(xbeeStats);
+  }*/
+  yield();
+}
 
-  /*
-  unsigned long myTime = millis();
-  while(myTime + XBEE_TX_INTERVAL > millis()) {
-    continue;
-  }
-  */
+void gpsLoop() {
+  //DEBUG("GPS loop");
+  // Read GPS values
+  gpsFormatter.readSerial(10); // Doesn't need a long timeout
+  gpsFormatter.writeToData(xbeeStats);
+  gpsFormatter.writeToData(serialStats);
+  yield();
+}
 
+void commandLoop() {
   // Check for serial commands and shutdown/reset buttons
   checkSerialCommands();
   shutdownOnCommand();
+  yield();
 }
 
 // Shutdown and reset button interrupts =======================================
@@ -193,9 +196,19 @@ void checkSerialCommands() {
   char cmd = Serial.read();
   if (cmd == 's') shutdownButtonPressed = true;
   else if (cmd == 'r') resetButtonPressed = true;
-  else if (cmd == 'd') sendStatsSerial(testStats); // DriverHUD requesting data
-  else if (cmd == 'x') checkShutdown = true;
-  else if (cmd == '?') checkConnected = true;
+  else if (cmd == 'd') sendStatsSerial(serialStats); // DriverHUD requesting data
+  else if (cmd == 'x') // Check shutdown
+  {
+    DEBUG("Checking if XBee is shutdown, please wait up to 5 seconds...");
+    if (xbee.isShutDown(5000)) Serial.println("isShutDown: YES!");
+    else Serial.println("isShutDown: No :(");
+  }
+  else if (cmd == '?') // Check connected
+  {
+    DEBUG("Checking if XBee is connected, please wait up to 5 seconds...");
+    if (xbee.isConnected(5000)) Serial.println("isConnected: YES!");
+    else Serial.println("isConnected: No :(");
+  }
 }
 
 // TODO: Format the output of shutdown/reset in a way the DriverHUD can understand
@@ -229,22 +242,6 @@ void shutdownOnCommand()
     resetButtonPressed = false;
     shutdownButtonPressed = false;
   }
-  else if (checkShutdown)
-  {
-    Serial.println("Checking if XBee is shutdown, please wait up to 5 seconds...");
-    bool isShutdown = xbee.isShutDown(5000);
-    if (isShutdown) Serial.println("isShutDown: YES!");
-    else Serial.println("isShutDown: No :(");
-    checkShutdown = false;
-  }
-  else if (checkConnected)
-  {
-    Serial.println("Checking if XBee is connected, please wait up to 5 seconds...");
-    bool isConnected = xbee.isConnected(5000);
-    if (isConnected) Serial.println("isConnected: YES!");
-    else Serial.println("isConnected: No :(");
-    checkConnected = false;
-  }
 }
 
 // Format and send telemetry data =============================================
@@ -256,17 +253,18 @@ void sendStatsPeriodically(int period)
   {
     nextTimeWeSendFrame = myTime + period;
     DEBUG("Free memory: " + String(freeMemory()) + "\0");
-    // randomizeData();
+    // randomizeData(xbeeStats);
     if (xbee.isConnected(5000))
     {
       userFrame resp;
-      sendStats(testStats);
+      sendStats(xbeeStats);
       const unsigned long myTime = millis();
       const unsigned timeout = 10000;
-      testStats.clear();
+      xbeeStats.clear(); // TODO: This should only happen if sent successfully
       do
       {
         resp = xbee.read();
+        yield();
       } while (millis() < myTime+timeout && resp.frameType != 0xB0);
       if (resp.frameType != 0xB0)
       {
@@ -281,39 +279,11 @@ void sendStatsPeriodically(int period)
   }
 }
 
-// Create a JSON string containing the latest sensor values from stats and store it in buf
-int fillDataBuffer(char buf[], volatile TelemetryData& stats)
-{
-  strcpy(buf, "{");
-  
-  int bodyLength = 1; // the open bracket
-  for (int k = 0; k < TelemetryData::Key::_LAST; k++)
-  {
-    if (stats.isPresent(k))
-    {
-      bodyLength += toKeyValuePair(buf + strlen(buf), k, stats) + 1; // append the key-value pair, plus the trailing comma
-      strcat(buf, ",");
-    }
-  }
-  // Here we are checking if we have data. If so, we need to replace the last trailing comma with a } to close the json body.
-  // If not, we need to append a }, and also add 1 to the content length.
-  if (buf[strlen(buf)-1] == ',')
-  {
-    buf[strlen(buf)-1] = '}';
-  }
-  else if (buf[strlen(buf)-1] == '{')
-  {
-    strcat(buf, "}");
-    bodyLength++;
-  }
-  return bodyLength;
-}
-
 // Send stats to the cloud via Xbee
 void sendStats(volatile TelemetryData& stats)
 {
   DEBUG("sendStats");
-  int bodyLength = fillDataBuffer(dataBuffer, stats);
+  int bodyLength = stats.toJsonString(dataBuffer);
   char bodyLengthStr[4]; 
   sprintf(bodyLengthStr, "%03u", bodyLength);
   
@@ -333,98 +303,105 @@ void sendStats(volatile TelemetryData& stats)
 void sendStatsSerial(volatile TelemetryData& stats)
 {
   DEBUG("sendStatsSerial");
-  fillDataBuffer(dataBuffer, stats);
+  stats.toJsonString(dataBuffer);
   Serial.println(dataBuffer);
+  stats.clear();
 }
 
-int toKeyValuePair(char* dest, int key, volatile TelemetryData& data)
-{
-  switch(key)
-  {
-    case TelemetryData::Key::BATT_VOLTAGE: return sprintf(dest, "\"battery_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_CURRENT: return sprintf(dest, "\"battery_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_TEMP: return sprintf(dest, "\"battery_temperature\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::BATT_CHARGE: return sprintf(dest, "\"battery_charge\":%6f", data.getUInt(key)); break;
-    case TelemetryData::Key::BMS_FAULT: return sprintf(dest, "\"bms_fault\":%d", data.getBool(key)); break;
-    case TelemetryData::Key::GPS_COURSE: return sprintf(dest, "\"gps_course\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_TIME: return sprintf(dest, "\"gps_time\":\"%08u\"", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_DATE: return sprintf(dest, "\"gps_date\":\"%06u\"", data.getUInt(key)); break;
-    case TelemetryData::Key::GPS_LAT: return sprintf(dest, "\"gps_lat\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_LON: return sprintf(dest, "\"gps_lon\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::GPS_SPD: return sprintf(dest, "\"gps_speed\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_VOLTAGE: return sprintf(dest, "\"solar_voltage\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::SOLAR_CURRENT: return sprintf(dest, "\"solar_current\":%6f", data.getDouble(key)); break;
-    case TelemetryData::Key::MOTOR_SPD: return sprintf(dest, "\"motor_speed\":%6f", data.getDouble(key)); break;
-  }
-}
 
-// Read data from CAN bus =====================================================
+// Read and store data from CAN bus ===========================================
 
-// TODO: implement rest of these?
 void CANCallback(CAN_FRAME* frame)
 {
-  // if msg id == 0x6B1, let maxTempCallBack handle it
-  if (frame->id == 0x6B1)
-  {
-    maxTempCallback(frame);
-  }
-  
+  #ifdef DEBUG_BUILD
+    //printCanFrame(frame);
+  #endif
+  processCanFrame(frame, xbeeStats);
+  processCanFrame(frame, serialStats);
 }
 
-void maxTempCallback(CAN_FRAME* frame) // assume we have a temperature frame
+void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
 {
-  double newTemp = frame->data.bytes[4];
-  if (!testStats.isPresent(TelemetryData::Key::BATT_TEMP) || testStats.getDouble(TelemetryData::Key::BATT_TEMP) < newTemp)
+  uint8_t* bytes = frame->data.bytes;
+  switch (frame->id)
   {
-    testStats.setDouble(TelemetryData::Key::BATT_TEMP, newTemp);
+  case 0x36:
+    break;
+  case 0x6b0: // Basic pack information
+    stats.setDouble(TelemetryData::Key::PACK_VOLTAGE, ((bytes[4] << 8) + bytes[5]) / 10.0);
+    stats.setDouble(TelemetryData::Key::PACK_SOC, bytes[6] / 2.0);
+    break;
+  case 0x6b1: // Pack temperature (amphours and health also available)
+    keepMaxStat(stats, TelemetryData::Key::MAX_PACK_TEMP, bytes[4]);
+    keepMinStat(stats, TelemetryData::Key::MIN_PACK_TEMP, bytes[5]);
+    stats.setDouble(TelemetryData::Key::AVG_PACK_TEMP, bytes[6]);
+    break;
+  case 0x6b2: // Cell voltage extrema
+    keepMinStat(stats, TelemetryData::Key::MIN_CELL_VOLTAGE, ((bytes[0] << 8) + bytes[1]) / 10000.0);
+    keepMaxStat(stats, TelemetryData::Key::MAX_CELL_VOLTAGE, ((bytes[3] << 8) + bytes[4]) / 10000.0);
+    // Could also get the IDs of min/max cell voltage
+    break;
+  case 0x6b3: // Misc cell info
+    stats.setDouble(TelemetryData::Key::AVG_CELL_VOLTAGE, ((bytes[0] << 8) + bytes[1]) / 10000.0); 
+    stats.setDouble(TelemetryData::Key::INPUT_VOLTAGE, ((bytes[2] << 8) + bytes[3]) / 10.0);
+    stats.setDouble(TelemetryData::Key::AVG_CELL_RESISTANCE, ((bytes[4] << 8) + bytes[5]) / 100.0);
+    break;
+  case 0x6b4: // BMS MPO state
+    break;
+  case 0x6b5: // BMS Relay state
+    break;
+  case 0x6b6: // Pack current and BMS faults
+    stats.setDouble(TelemetryData::Key::PACK_CURRENT, ((bytes[0] << 8) + bytes[1]) / 10.0);
+    stats.setUInt(TelemetryData::Key::BMS_FAULT, bytes[2] << 24 + bytes[3] << 16 + bytes[4] << 8 + bytes[5]);
+  default:
+    break;
   }
 }
 
-// For testing, set some sensors to random values
-void randomizeData()
+void keepMinStat(volatile TelemetryData& stats, int key, double newValue)
+{
+  if (!stats.isPresent(key) || stats.getDouble(key) > newValue)
+  {
+    stats.setDouble(key, newValue);
+  }
+}
+
+void keepMaxStat(volatile TelemetryData& stats, int key, double newValue)
+{
+  if (!stats.isPresent(key) || stats.getDouble(key) < newValue)
+  {
+    stats.setDouble(key, newValue);
+  }
+}
+
+// Testing/debugging functions ================================================
+
+// Set some sensors to random values
+void randomizeData(volatile TelemetryData& stats)
 {
   for (int i = 0; i < TelemetryData::Key::_LAST; i++)
   {
     
     if (i == TelemetryData::Key::BMS_FAULT)
     {
-      testStats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max
+      stats.setBool(i, static_cast<bool>(random(0, 2))); // Excludes the max
     }
     else if (i == TelemetryData::Key::GPS_TIME)
     {
-      testStats.setUInt(i, static_cast<unsigned int>(random(5001)));
+      stats.setUInt(i, static_cast<unsigned int>(random(5001)));
     }
     else
     {
-      testStats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
+      stats.setDouble(i, random(0, 8000) / static_cast<double>(random(1, 100)));
     }
   }
 }
 
-/* =================================
- * Temporarily not being used
- * =================================*/
-//void setMaxTemp()
-//{
-//  // Check for received message
-//  long lMsgID;
-//  bool bExtendedFormat;
-//  byte cRxData[8];
-//  byte cDataLen;
-//  if (canRx(0, &lMsgID, &bExtendedFormat, &cRxData[0], &cDataLen) == CAN_OK)
-//  {
-//    if (lMsgID == 0x6B1) {
-//      if (cRxData[4] > testStats.getDouble(TelemetryData::Key::BATT_TEMP))
-//        testStats.setDouble(TelemetryData::Key::BATT_TEMP, cRxData[4]);
-//    }
-//  } // end if
-//}
-
-//void httpsTest()
-//{
-//  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
-//  xbee.sendTCP(IPAddress(54, 166, 163, 67), 443, 0, 0, requestBuffer, strlen(requestBuffer));
-//}
+void httpsTest()
+{
+  strcpy(requestBuffer, "GET /get HTTP/1.1\r\nHost: httpbin.org\r\n");
+  xbee.sendTCP(IPAddress(54, 166, 163, 67), PORT_HTTPS, 0, PROTOCOL_TLS, 0, requestBuffer, strlen(requestBuffer));
+}
 
 void printReceivedFrame(userFrame& recvd)
 {
@@ -440,4 +417,20 @@ void printReceivedFrame(userFrame& recvd)
   }
   // else
     // DEBUG("Got here nothing :(");
+}
+
+void printCanFrame(CAN_FRAME* frame)
+{
+  Serial.println("[BEGIN CAN frame]:");
+  Serial.println("ID (EID/SID): 0x" + String(frame->id, HEX));
+  Serial.println("Family ID: 0x" + String(frame->fid, HEX));
+  Serial.println("Extended ID: 0x" + String(frame->extended, HEX));
+  Serial.println("Length: " + String(frame->length));
+  //Serial.println("Data (in hex): " + String(frame->data.value, HEX)); // Can't do uint64_t
+  String data = "Data (in hex): " ;
+  for (int i = 0; i < frame->length; i++) {
+    data += String(frame->data.bytes[i], HEX) + " ";
+  }
+  Serial.println(data);
+  Serial.println("[END CAN frame]");
 }

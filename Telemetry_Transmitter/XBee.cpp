@@ -10,25 +10,37 @@
 #include "IPAddress.h"
 #include <Arduino.h>
 
+bool XBee::waitForOK(unsigned timeout = 1000)
+{
+  // TODO: This code woun't handle a timeout in the middle of reading an OK correctly
+  // This is not unlikely: 9600 baud ~= 1 byte per millisecond, and serial timeout should be kept low
+  // Probably need to roll my own readStringUntil
+  unsigned int startTime = millis();
+  do
+  {
+    String ok = m_serial.readStringUntil('\r');
+    if (ok == "OK") return true;
+    delay(20); // Give scheduler opportutity to run other threads
+  } while (millis() < (startTime + timeout));
+  return false;
+}
+
 bool XBee::configure()
 {
+  m_serial.setTimeout(50); // TODO: Test that this works fine
+
+  // Clear anything leftover in the serial buffer
+  // This is common if the Arduino was reset
+  // TODO: waitForOK may make this unneeded
+  //delay(1000);
+  //while (m_serial.available()) m_serial.read();
+  
   m_serial.write("+++");
   delay(1500);
-  String ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-  {
-    DEBUG("[XBee] Config fail point 1: " + ok);
-    return false;
-  }
+  if (!waitForOK()) return false;
   m_serial.write("ATAP 1\r");
   delay(2000);
-  ok = "";
-  ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-  {
-    DEBUG("[XBee] Config fail point 2: " + ok);
-    return false;
-  }
+  if (!waitForOK()) return false;
   m_serial.write("CN\r");
   return true;
 }
@@ -115,16 +127,9 @@ bool XBee::shutdownCommandMode()
 {
   m_serial.write("+++");
   delay(1500);
-  String ok = m_serial.readStringUntil('\r');
-  if (ok != "OK")
-    return false;
+  if (!waitForOK()) return false;
   m_serial.write("ATSD 0\r");
-  m_serial.setTimeout(120000);
-  ok = "";
-  ok = m_serial.readStringUntil('\r');
-  m_serial.setTimeout(1000);
-  if (ok != "OK")
-    return false;
+  if (!waitForOK(120000)) return false;
   m_serial.write("CN\r");
   return true;
 }
@@ -166,6 +171,7 @@ userFrame XBee::read()
       m_rxBuffer.clear();
       return NULL_USER_FRAME;
     }
+    yield();
   }
   Serial.println("XBee read: Available for write: " + String(Serial.availableForWrite()));
   Serial.println("[BEGIN XBee Rx]");

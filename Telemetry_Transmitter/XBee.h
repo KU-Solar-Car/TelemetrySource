@@ -22,6 +22,7 @@ class XBee
   private:
   Stream& m_serial;
   frame m_rxBuffer;
+  bool waitForOK(unsigned timeout);
 
   public:
   XBee(Stream& serial) : m_serial(serial){}

@@ -14,6 +14,7 @@ Arduino system to process and transmit car data. Uses an Arduino Due with the fo
 * Install the following libraries using Arduino IDE library manager:
 	* TinyGPS
 	* DueTimer
+	* Scheduler
 * Install the [Arduino-MemoryFree](https://github.com/mpflaga/Arduino-MemoryFree) library manually to %UserProfile%\Documents\Arduino\libraries
 
 # Impotant XBee note
@@ -23,22 +24,32 @@ hardware damage. The green DI05 light on the XBee Arduino shield will be
 blinking when the modem is on and solid when the modem is off.
 
 # Transmitted data
-| Field							| Unit			| Format		|
+| Field							| Unit			| Type			|
 | ---							| ---			| ---			|
-| Battery Voltage 				| Volts			| Float			|
-| Battery Current				| Amps			| Float			|
-| Battery Temperature			| Celsius		| Float			|
-| Pack Charge					| %				| Unsigned Int	|
-| BMS Fault						| N/A			| Bool			|
-| GPS Course					| Degrees		| Float			|
-| GPS Time						| N/A			| hhmmsscc		|
-| GPS Date						| N/A			| ddmmyy		|
-| GPS Latitude					| Degrees		| Float			|
-| GPS Longitude					| Degrees		| Float			|
-| GPS Speed						| MPH			| Float			|
-| Solar Voltage					| ?				| ?				|
-| Solar Current					| ?				| ?				|
-| Motor Speed					| ? 			| ?				|
+| pack_voltage	 				| Volts			| float			|
+| pack_soc		 				| %				| float			|
+| pack_current	 				| Amps			| float			|
+| min_pack_temp	 				| Celsius		| float			|
+| avg_pack_temp	 				| Celsius		| float			|
+| max_pack_temp	 				| Celsius		| float			|
+| min_cell_voltage 				| Volts			| float			|
+| avg_cell_voltage 				| Volts			| float			|
+| max_cell_voltage 				| Volts			| float			|
+| input_voltage 				| Volts			| float			|
+| bms_fault		 				| Bit flags		| unsigned int	|
+| motor_speed					| MPH			| float			|
+| motor_current					| Amps			| float			|
+| motor_controller_temp			| Celsius		| float			|
+| motor_temp					| Celsius		| float			|
+| motor_fault					| Bit flags		| unsigned int	|
+| solar_voltage	 				| Volts			| float			|
+| solar_fault	 				| Bit flags		| unsigned int	|
+| gps_course	 				| Degrees		| float			|
+| gps_time						| hhmmsscc		| string		|
+| gps_date						| ddmmyy		| string		|
+| gps_lat						| Degrees		| float			|
+| gps_lon						| Degrees		| float			|
+| gps_speed						| MPH			| float			|
 
 # Orion BMS Fields Reference
 | Field							| BMS Field Name				| Default PID	|

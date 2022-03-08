@@ -29,9 +29,10 @@ void GPSFormatter::readSerial(int delay)
     while (serial->available())
     {
       char red = serial->read();
-      gps.encode(red);
+      gps.encode(red); // TODO: This returns a boolean for if it managed to get new data
     }
-  } while (millis() - start < delay);
+    yield();
+  } while (millis() - start < delay); // TODO: Is this loop even needed?
 }
 
 void GPSFormatter::writeToData(volatile TelemetryData& stats)
@@ -68,11 +69,11 @@ void GPSFormatter::writeToData(volatile TelemetryData& stats)
 
   fspeed = gps.f_speed_mph();
   if(!(fspeed == TinyGPS::GPS_INVALID_F_SPEED)) {
-    stats.setDouble(TelemetryData::Key::GPS_SPD, fspeed);
+    stats.setDouble(TelemetryData::Key::GPS_SPEED, fspeed);
   }
 
   fcourse = gps.f_course();
-  if(!(fcourse == TinyGPS::GPS_INVALID_ANGLE)) {
+  if(!(fcourse == TinyGPS::GPS_INVALID_F_ANGLE)) {
     stats.setDouble(TelemetryData::Key::GPS_COURSE, fcourse);
   }
 }
