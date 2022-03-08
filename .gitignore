@@ -1,3 +1,7 @@
 .theia/
 build/
 Telemetry_Transmitter/auth_key.h
+
+.vscode/*
+.DS_Store
+*/.DS_Store
