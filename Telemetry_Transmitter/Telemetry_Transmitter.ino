@@ -12,6 +12,8 @@
 #include <DueTimer.h>
 #include <Scheduler.h>
 
+const double TIRE_DIAMETER_IN = 21.3;
+
 // Number of milliseconds to wait between transmitting data packets
 const int XBEE_TX_INTERVAL = 2000;
 
@@ -325,6 +327,7 @@ void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
   uint8_t* bytes = frame->data.bytes;
   switch (frame->id)
   {
+  // BMS
   case 0x36:
     break;
   case 0x6b0: // Basic pack information
@@ -353,6 +356,27 @@ void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
   case 0x6b6: // Pack current and BMS faults
     stats.setDouble(TelemetryData::Key::PACK_CURRENT, ((bytes[0] << 8) + bytes[1]) / 10.0);
     stats.setUInt(TelemetryData::Key::BMS_FAULT, bytes[2] << 24 + bytes[3] << 16 + bytes[4] << 8 + bytes[5]);
+
+  // Motor controller
+  case 0x0CF11E05: {
+    // Note: Motor controller is little endian (unlike BMS which is big endian)
+    double rpm = (bytes[1] << 8 + bytes[0]) / 10.0;
+    // Convert from rpm and inches to miles per hour
+    double speed = rpm * PI * TIRE_DIAMETER_IN / 12 / 5280 * 60;
+    stats.setDouble(TelemetryData::Key::MOTOR_SPEED, speed);
+    stats.setDouble(TelemetryData::Key::MOTOR_CURRENT, (bytes[3] << 8 + bytes[2]) / 10.0);
+    stats.setUInt(TelemetryData::Key::MOTOR_FAULT, bytes[7] << 8 + bytes[6]);
+    break;
+  }
+  case 0x0CF11F05:
+    stats.setDouble(TelemetryData::Key::MOTOR_CONTROLLER_TEMP, bytes[3] << 8 + bytes[2] - 40);
+    stats.setDouble(TelemetryData::Key::MOTOR_TEMP, bytes[5] << 8 + bytes[4] - 30);
+
+  // Solar MPPTs
+  case 0b1110111001:
+    stats.setDouble(TelemetryData::Key::SOLAR_VOLTAGE, ((bytes[4] & 0b11) << 8) + bytes[5]);
+    stats.setUInt(TelemetryData::Key::SOLAR_FAULT, bytes[0]);
+
   default:
     break;
   }
