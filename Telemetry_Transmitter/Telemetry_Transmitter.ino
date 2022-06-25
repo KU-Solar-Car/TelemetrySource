@@ -355,7 +355,9 @@ void processCanFrame(CAN_FRAME* frame, volatile TelemetryData& stats)
     break;
   case 0x6b6: // Pack current and BMS faults
     stats.setDouble(TelemetryData::Key::PACK_CURRENT, ((bytes[0] << 8) + bytes[1]) / 10.0);
-    stats.setUInt(TelemetryData::Key::BMS_FAULT, bytes[2] << 24 + bytes[3] << 16 + bytes[4] << 8 + bytes[5]);
+    // Place DTS2 bytes above DTS1 bytes
+    // See also: https://www.orionbms.com/manuals/utility_o2/bms_param_dtc_status_1.html
+    stats.setUInt(TelemetryData::Key::BMS_FAULT, bytes[4] << 24 + bytes[5] << 16 + bytes[2] << 8 + bytes[3]);
 
   // Motor controller
   case 0x0CF11E05: {
